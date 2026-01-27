@@ -4,11 +4,8 @@ const HOMEDIR = path.join('jest', NAME);
 
 import path from 'node:path';
 
-import { Matterbridge, MatterbridgeEndpoint, PlatformConfig } from 'matterbridge';
-import { AnsiLogger } from 'matterbridge/logger';
+import { PlatformConfig } from 'matterbridge';
 import { jest } from '@jest/globals';
-
-import initializePlugin, { Platform } from './module.js';
 import {
   addMatterbridgePlatform,
   createMatterbridgeEnvironment,
@@ -19,7 +16,9 @@ import {
   setupTest,
   startMatterbridgeEnvironment,
   stopMatterbridgeEnvironment,
-} from './utils/jestHelpers.js';
+} from 'matterbridge/jestutils';
+
+import initializePlugin, { Platform } from './module.js';
 
 setupTest('Platform');
 
@@ -60,6 +59,7 @@ describe('TestPlatform', () => {
 
   it('should return an instance of TestPlatform', async () => {
     platform = initializePlugin(matterbridge, log, config);
+    addMatterbridgePlatform(platform);
     expect(platform).toBeInstanceOf(Platform);
     expect(loggerInfoSpy).toHaveBeenCalledWith('Initializing platform:', config.name);
     expect(loggerInfoSpy).toHaveBeenCalledWith('Finished initializing platform:', config.name);
@@ -69,9 +69,9 @@ describe('TestPlatform', () => {
   it('should throw error in load when version is not valid', () => {
     matterbridge.matterbridgeVersion = '1.5.0';
     expect(() => new Platform(matterbridge, log, config)).toThrow(
-      'This plugin requires Matterbridge version >= "3.3.0". Please update Matterbridge to the latest version in the frontend.',
+      'This plugin requires Matterbridge version >= "3.5.0". Please update Matterbridge to the latest version in the frontend.',
     );
-    matterbridge.matterbridgeVersion = '3.3.0';
+    matterbridge.matterbridgeVersion = '3.5.0';
   });
 
   it('should initialize platform with config name', () => {
