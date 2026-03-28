@@ -32,9 +32,15 @@
     },
     "alertTimeout": {
       "title": "Alert Timeout",
-      "description": "The timeout duration for alerts. Set 0 to disable automatic reset.",
+      "description": "The timeout duration in seconds for alerts. Set 0 to disable automatic reset.",
       "type": "number",
-      "default": 60000
+      "default": 60
+    },
+    "useSwitch": {
+      "title": "Use Switch",
+      "description": "Enable the switch device types for the trigger. Don't use it with Alexa cause it doesn't support the switch type.",
+      "type": "boolean",
+      "default": false
     },
     "debug": {
       "title": "Enable Debug",

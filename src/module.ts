@@ -1,15 +1,18 @@
 import {
   bridgedNode,
   contactSensor,
+  DeviceTypeDefinition,
   doorLockDevice,
   MatterbridgeDynamicPlatform,
   MatterbridgeEndpoint,
   onOffMountedSwitch,
   onOffOutlet,
+  onOffSwitch,
   PlatformConfig,
   PlatformMatterbridge,
 } from 'matterbridge';
 import { AnsiLogger } from 'matterbridge/logger';
+import { AtLeastOne } from 'matterbridge/matter';
 import { BooleanState, DoorLock, OnOff } from 'matterbridge/matter/clusters';
 
 export const MODE_AWAY = 'Mode Away';
@@ -35,8 +38,6 @@ export const triggers: Triggers[] = [TRIGGER_AWAY, TRIGGER_HOME, TRIGGER_NIGHT, 
 
 export const alerts: Alerts[] = [ALERT_AWAY, ALERT_HOME, ALERT_NIGHT, ALERT_24H, ALERT_MASTER];
 
-export const shortTimeout = 500;
-
 export type Modes = typeof MODE_AWAY | typeof MODE_HOME | typeof MODE_NIGHT | typeof MODE_VACATION | typeof MODE_OFF;
 
 export type Triggers = typeof TRIGGER_AWAY | typeof TRIGGER_HOME | typeof TRIGGER_NIGHT | typeof TRIGGER_24H;
@@ -46,6 +47,7 @@ export type Alerts = typeof ALERT_AWAY | typeof ALERT_HOME | typeof ALERT_NIGHT 
 export type SecurityPlatformConfig = PlatformConfig & {
   securityRoom: string;
   alertTimeout: number;
+  useSwitch: boolean;
 };
 
 /**
@@ -62,6 +64,7 @@ export default function initializePlugin(matterbridge: PlatformMatterbridge, log
 }
 
 export class Platform extends MatterbridgeDynamicPlatform {
+  shortTimeout = 500;
   currentMode: Modes = MODE_OFF;
 
   constructor(
@@ -72,8 +75,8 @@ export class Platform extends MatterbridgeDynamicPlatform {
     super(matterbridge, log, config);
 
     // Verify that Matterbridge is the correct version
-    if (this.verifyMatterbridgeVersion === undefined || typeof this.verifyMatterbridgeVersion !== 'function' || !this.verifyMatterbridgeVersion('3.7.0')) {
-      throw new Error(`This plugin requires Matterbridge version >= "3.7.0". Please update Matterbridge to the latest version in the frontend.`);
+    if (this.verifyMatterbridgeVersion === undefined || typeof this.verifyMatterbridgeVersion !== 'function' || !this.verifyMatterbridgeVersion('3.7.2')) {
+      throw new Error(`This plugin requires Matterbridge version >= "3.7.2". Please update Matterbridge to the latest version in the frontend.`);
     }
 
     this.log.info('Initializing platform:', this.config.name);
@@ -86,6 +89,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
 
     // Make sure the platform is ready before registering devices
     await this.ready;
+    const triggerDeviceTypes: AtLeastOne<DeviceTypeDefinition> = this.config.useSwitch ? [onOffSwitch, bridgedNode] : [onOffMountedSwitch, onOffOutlet, bridgedNode];
 
     // Create devices for modes
     for (const mode of modes) {
@@ -93,7 +97,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
         .createDefaultBridgedDeviceBasicInformationClusterServer(this.getName(mode), this.getSerial(mode), undefined, 'Matterbridge', 'Matterbridge Security Plugin')
         .createDefaultDoorLockClusterServer()
         .addRequiredClusterServers()
-        .addCommandHandler('DoorLock.lockDoor', async () => {
+        .addCommandHandler('DoorLock.lockDoor', async ({ context }) => {
           this.log.info(`Received lockDoor command for mode: ${mode}`);
           await this.getDeviceById(this.getId(mode))?.triggerEvent(
             DoorLock.Complete,
@@ -102,7 +106,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
               lockOperationType: DoorLock.LockOperationType.Lock,
               operationSource: DoorLock.OperationSource.Remote,
               userIndex: null,
-              fabricIndex: null,
+              fabricIndex: context?.fabric ?? null,
               sourceNode: null,
               credentials: null,
             },
@@ -110,7 +114,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
           );
           await this.syncronizeModes(mode);
         })
-        .addCommandHandler('DoorLock.unlockDoor', async () => {
+        .addCommandHandler('DoorLock.unlockDoor', async ({ context }) => {
           this.log.info(`Received unlockDoor command for mode: ${mode}`);
           await this.getDeviceById(this.getId(mode))?.triggerEvent(
             DoorLock.Complete,
@@ -119,7 +123,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
               lockOperationType: DoorLock.LockOperationType.Unlock,
               operationSource: DoorLock.OperationSource.Remote,
               userIndex: null,
-              fabricIndex: null,
+              fabricIndex: context?.fabric ?? null,
               sourceNode: null,
               credentials: null,
             },
@@ -128,7 +132,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
           setTimeout(async () => {
             this.log.debug(`Resetting mode to off after unlock command for mode: ${mode}`);
             await this.setModeOff();
-          }, shortTimeout).unref();
+          }, this.shortTimeout).unref();
         })
         .addCommandHandler('DoorLock.unlockWithTimeout', async () => {
           this.log.info(`Received unlockWithTimeout command for mode: ${mode}`);
@@ -144,7 +148,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
 
     // Create devices for triggers
     for (const trigger of triggers) {
-      const triggerDevice = new MatterbridgeEndpoint([onOffMountedSwitch, onOffOutlet, bridgedNode], { id: `${this.getId(trigger)}` })
+      const triggerDevice = new MatterbridgeEndpoint(triggerDeviceTypes, { id: `${this.getId(trigger)}` })
         .createDefaultBridgedDeviceBasicInformationClusterServer(this.getName(trigger), this.getSerial(trigger), undefined, 'Matterbridge', 'Matterbridge Security Plugin')
         .addRequiredClusterServers()
         .addCommandHandler('OnOff.on', async () => {
@@ -153,7 +157,8 @@ export class Platform extends MatterbridgeDynamicPlatform {
           setTimeout(async () => {
             this.log.debug(`Resetting trigger state to off after on command for trigger: ${trigger}`);
             await triggerDevice.setAttribute(OnOff.Complete, 'onOff', false);
-          }, shortTimeout).unref();
+          }, this.shortTimeout).unref();
+          if (this.currentMode === MODE_OFF) return;
           if (trigger === TRIGGER_AWAY && this.currentMode !== MODE_AWAY && this.currentMode !== MODE_VACATION) return;
           else if (trigger === TRIGGER_HOME && this.currentMode !== MODE_HOME) return;
           else if (trigger === TRIGGER_NIGHT && this.currentMode !== MODE_NIGHT) return;
@@ -169,7 +174,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
               await this.getDeviceById(this.getId(ALERT_MASTER))?.triggerEvent(BooleanState.Complete, 'stateChange', { stateValue: true }, this.log);
               await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.setAttribute(BooleanState.Complete, 'stateValue', true, this.log);
               await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.triggerEvent(BooleanState.Complete, 'stateChange', { stateValue: true }, this.log);
-            }, this.config.alertTimeout).unref();
+            }, this.config.alertTimeout * 1000).unref();
           }
         });
       await this.registerDevice(triggerDevice);
@@ -218,6 +223,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
     await this.context?.set('LastSecurityMode', MODE_OFF);
     await this.getDeviceById(this.getId(MODE_OFF))?.setAttribute(DoorLock.Complete, 'lockState', DoorLock.LockState.Locked, this.log);
     await this.syncronizeModes(MODE_OFF);
+    await this.resetAlerts();
   }
 
   /**
@@ -230,8 +236,10 @@ export class Platform extends MatterbridgeDynamicPlatform {
     this.log.info(`Synchronizing modes for mode ${mode}`);
     this.currentMode = mode;
     await this.context?.set('LastSecurityMode', mode);
+    if (mode === MODE_OFF) await this.resetAlerts();
     for (const m of modes) {
       const device = this.getDeviceById(this.getId(m));
+      // istanbul ignore next - This is to prevent errors in case the device is not found, it should never happen but it's better to be safe than sorry
       if (!device) continue;
       if (device.id === this.getId(mode)) continue;
       await device.setAttribute(DoorLock.Complete, 'lockState', DoorLock.LockState.Unlocked, this.log);

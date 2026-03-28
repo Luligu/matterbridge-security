@@ -3,7 +3,8 @@
   "type": "DynamicPlatform",
   "version": "1.0.0",
   "securityRoom": "Security",
-  "alertTimeout": 60000,
+  "alertTimeout": 60,
+  "useSwitch": false,
   "debug": false,
   "unregisterOnShutdown": false
 }

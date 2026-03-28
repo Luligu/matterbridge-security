@@ -6,7 +6,6 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { jest } from '@jest/globals';
-import { PlatformConfig } from 'matterbridge';
 import {
   addMatterbridgePlatform,
   createMatterbridgeEnvironment,
@@ -18,8 +17,9 @@ import {
   startMatterbridgeEnvironment,
   stopMatterbridgeEnvironment,
 } from 'matterbridge/jestutils';
+import { DoorLock, OnOff } from 'matterbridge/matter/clusters';
 
-import initializePlugin, { Platform, SecurityPlatformConfig } from './module.js';
+import initializePlugin, { Modes, modes, Platform, SecurityPlatformConfig, triggers } from './module.js';
 
 setupTest('Platform');
 
@@ -66,7 +66,7 @@ describe('TestPlatform', () => {
     const savedVersion = matterbridge.matterbridgeVersion;
     matterbridge.matterbridgeVersion = '1.5.0';
     expect(() => new Platform(matterbridge, log, config)).toThrow(
-      'This plugin requires Matterbridge version >= "3.7.0". Please update Matterbridge to the latest version in the frontend.',
+      'This plugin requires Matterbridge version >= "3.7.2". Please update Matterbridge to the latest version in the frontend.',
     );
     matterbridge.matterbridgeVersion = savedVersion;
   });
@@ -80,10 +80,32 @@ describe('TestPlatform', () => {
 
   it('should call onStart with reason', async () => {
     await platform.onStart('Test reason');
+    platform.shortTimeout = 1;
+    platform.config.alertTimeout = 0.001;
     expect(loggerInfoSpy).toHaveBeenCalledWith('onStart called with reason:', 'Test reason');
+    for (const mode of modes) {
+      const device = platform.getDeviceById(platform.getId(mode));
+      expect(device).toBeDefined();
+      await device?.invokeBehaviorCommand(DoorLock.Complete, 'lockDoor');
+      await device?.invokeBehaviorCommand(DoorLock.Complete, 'unlockDoor');
+      await device?.invokeBehaviorCommand(DoorLock.Complete, 'unlockWithTimeout', { timeout: 1 });
+    }
+    for (const trigger of triggers) {
+      platform.currentMode = trigger.replaceAll('Trigger', 'Mode') as Modes;
+      const device = platform.getDeviceById(platform.getId(trigger));
+      expect(device).toBeDefined();
+      await device?.invokeBehaviorCommand(OnOff.Complete, 'on');
+    }
+    platform.config.unregisterOnShutdown = true;
+    await platform.onShutdown('Test reason');
+
+    platform.shortTimeout = 500;
+    platform.config.alertTimeout = 60;
+    platform.config.unregisterOnShutdown = false;
   });
 
   it('should call onStart without reason', async () => {
+    platform.config.useSwitch = true;
     await platform.onStart();
     expect(loggerInfoSpy).toHaveBeenCalledWith('onStart called with reason:', 'none');
   });
