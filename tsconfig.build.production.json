@@ -1,11 +1,12 @@
 {
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
+    "types": ["node"],
     "outDir": "dist",
     "rootDir": "src",
     "incremental": false,
     "composite": false,
-    "declaration": true,
+    "declaration": false,
     "declarationMap": false,
     "sourceMap": false,
     "removeComments": true

@@ -2,10 +2,11 @@ const MATTER_PORT = 6000;
 const NAME = 'Platform';
 const HOMEDIR = path.join('jest', NAME);
 
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { PlatformConfig } from 'matterbridge';
 import { jest } from '@jest/globals';
+import { PlatformConfig } from 'matterbridge';
 import {
   addMatterbridgePlatform,
   createMatterbridgeEnvironment,
@@ -18,20 +19,14 @@ import {
   stopMatterbridgeEnvironment,
 } from 'matterbridge/jestutils';
 
-import initializePlugin, { Platform } from './module.js';
+import initializePlugin, { Platform, SecurityPlatformConfig } from './module.js';
 
 setupTest('Platform');
 
 describe('TestPlatform', () => {
   let platform: Platform;
 
-  const config: PlatformConfig = {
-    name: 'matterbridge-security',
-    type: 'DynamicPlatform',
-    version: '1.0.0',
-    debug: false,
-    unregisterOnShutdown: false,
-  };
+  const config = JSON.parse(readFileSync(path.join('.', 'matterbridge-security.config.json'), 'utf-8')) as SecurityPlatformConfig;
 
   beforeAll(async () => {
     // Create Matterbridge environment
@@ -46,6 +41,7 @@ describe('TestPlatform', () => {
 
   afterEach(async () => {
     // Cleanup after each test
+    jest.clearAllMocks();
   });
 
   afterAll(async () => {
@@ -67,11 +63,12 @@ describe('TestPlatform', () => {
   });
 
   it('should throw error in load when version is not valid', () => {
+    const savedVersion = matterbridge.matterbridgeVersion;
     matterbridge.matterbridgeVersion = '1.5.0';
     expect(() => new Platform(matterbridge, log, config)).toThrow(
-      'This plugin requires Matterbridge version >= "3.5.0". Please update Matterbridge to the latest version in the frontend.',
+      'This plugin requires Matterbridge version >= "3.7.0". Please update Matterbridge to the latest version in the frontend.',
     );
-    matterbridge.matterbridgeVersion = '3.5.0';
+    matterbridge.matterbridgeVersion = savedVersion;
   });
 
   it('should initialize platform with config name', () => {
@@ -86,6 +83,11 @@ describe('TestPlatform', () => {
     expect(loggerInfoSpy).toHaveBeenCalledWith('onStart called with reason:', 'Test reason');
   });
 
+  it('should call onStart without reason', async () => {
+    await platform.onStart();
+    expect(loggerInfoSpy).toHaveBeenCalledWith('onStart called with reason:', 'none');
+  });
+
   it('should call onConfigure', async () => {
     await platform.onConfigure();
     expect(loggerInfoSpy).toHaveBeenCalledWith('onConfigure called');
@@ -94,5 +96,11 @@ describe('TestPlatform', () => {
   it('should call onShutdown with reason', async () => {
     await platform.onShutdown('Test reason');
     expect(loggerInfoSpy).toHaveBeenCalledWith('onShutdown called with reason:', 'Test reason');
+  });
+
+  it('should call onShutdown without reason', async () => {
+    platform.config.unregisterOnShutdown = true;
+    await platform.onShutdown();
+    expect(loggerInfoSpy).toHaveBeenCalledWith('onShutdown called with reason:', 'none');
   });
 });
