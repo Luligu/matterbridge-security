@@ -31,13 +31,17 @@ export const ALERT_MASTER = 'Alert Master'; // Alert for master mode, can be use
 
 export const modes: Modes[] = [MODE_AWAY, MODE_HOME, MODE_NIGHT, MODE_VACATION, MODE_OFF];
 
-export const triggers = [TRIGGER_AWAY, TRIGGER_HOME, TRIGGER_NIGHT, TRIGGER_24H];
+export const triggers: Triggers[] = [TRIGGER_AWAY, TRIGGER_HOME, TRIGGER_NIGHT, TRIGGER_24H];
 
-export const alerts = [ALERT_AWAY, ALERT_HOME, ALERT_NIGHT, ALERT_24H, ALERT_MASTER];
+export const alerts: Alerts[] = [ALERT_AWAY, ALERT_HOME, ALERT_NIGHT, ALERT_24H, ALERT_MASTER];
 
 export const shortTimeout = 500;
 
 export type Modes = typeof MODE_AWAY | typeof MODE_HOME | typeof MODE_NIGHT | typeof MODE_VACATION | typeof MODE_OFF;
+
+export type Triggers = typeof TRIGGER_AWAY | typeof TRIGGER_HOME | typeof TRIGGER_NIGHT | typeof TRIGGER_24H;
+
+export type Alerts = typeof ALERT_AWAY | typeof ALERT_HOME | typeof ALERT_NIGHT | typeof ALERT_24H | typeof ALERT_MASTER;
 
 export type SecurityPlatformConfig = PlatformConfig & {
   securityRoom: string;
@@ -58,6 +62,8 @@ export default function initializePlugin(matterbridge: PlatformMatterbridge, log
 }
 
 export class Platform extends MatterbridgeDynamicPlatform {
+  currentMode: Modes = MODE_OFF;
+
   constructor(
     matterbridge: PlatformMatterbridge,
     log: AnsiLogger,
@@ -89,22 +95,49 @@ export class Platform extends MatterbridgeDynamicPlatform {
         .addRequiredClusterServers()
         .addCommandHandler('DoorLock.lockDoor', async () => {
           this.log.info(`Received lockDoor command for mode: ${mode}`);
-          await this.context?.set('LastSecurityMode', mode);
+          await this.getDeviceById(this.getId(mode))?.triggerEvent(
+            DoorLock.Complete,
+            'lockOperation',
+            {
+              lockOperationType: DoorLock.LockOperationType.Lock,
+              operationSource: DoorLock.OperationSource.Remote,
+              userIndex: null,
+              fabricIndex: null,
+              sourceNode: null,
+              credentials: null,
+            },
+            this.log,
+          );
           await this.syncronizeModes(mode);
         })
         .addCommandHandler('DoorLock.unlockDoor', async () => {
           this.log.info(`Received unlockDoor command for mode: ${mode}`);
+          await this.getDeviceById(this.getId(mode))?.triggerEvent(
+            DoorLock.Complete,
+            'lockOperation',
+            {
+              lockOperationType: DoorLock.LockOperationType.Unlock,
+              operationSource: DoorLock.OperationSource.Remote,
+              userIndex: null,
+              fabricIndex: null,
+              sourceNode: null,
+              credentials: null,
+            },
+            this.log,
+          );
           setTimeout(async () => {
+            this.log.debug(`Resetting mode to off after unlock command for mode: ${mode}`);
             await this.setModeOff();
           }, shortTimeout).unref();
         })
         .addCommandHandler('DoorLock.unlockWithTimeout', async () => {
-          this.log.info(`Received getLockState command for mode: ${mode}`);
+          this.log.info(`Received unlockWithTimeout command for mode: ${mode}`);
         });
       await this.registerDevice(doorLock);
       await doorLock.setAttribute(DoorLock.Complete, 'lockState', DoorLock.LockState.Unlocked, this.log);
     }
     const lastSecurityMode: Modes = (await this.context?.get('LastSecurityMode', MODE_OFF)) ?? MODE_OFF;
+    this.currentMode = lastSecurityMode;
     this.log.notice(`Last security mode: ${lastSecurityMode}`);
     await this.getDeviceById(this.getId(lastSecurityMode))?.setAttribute(DoorLock.Complete, 'lockState', DoorLock.LockState.Locked, this.log);
     await this.syncronizeModes(lastSecurityMode);
@@ -118,15 +151,24 @@ export class Platform extends MatterbridgeDynamicPlatform {
           this.log.info(`Received on command for trigger: ${trigger}`);
           // Restore the trigger state after a short timeout
           setTimeout(async () => {
+            this.log.debug(`Resetting trigger state to off after on command for trigger: ${trigger}`);
             await triggerDevice.setAttribute(OnOff.Complete, 'onOff', false);
           }, shortTimeout).unref();
-          // Trigger the alert device associated with the trigger and reset the trigger after the alert timeout
+          if (trigger === TRIGGER_AWAY && this.currentMode !== MODE_AWAY && this.currentMode !== MODE_VACATION) return;
+          else if (trigger === TRIGGER_HOME && this.currentMode !== MODE_HOME) return;
+          else if (trigger === TRIGGER_NIGHT && this.currentMode !== MODE_NIGHT) return;
+          else this.log.info(`Trigger ${trigger} activated for mode ${this.currentMode}, activating alerts...`);
+          // Trigger the master alert and the alert device associated with the trigger and reset the trigger after the alert timeout
           await this.getDeviceById(this.getId(ALERT_MASTER))?.setAttribute(BooleanState.Complete, 'stateValue', false, this.log);
+          await this.getDeviceById(this.getId(ALERT_MASTER))?.triggerEvent(BooleanState.Complete, 'stateChange', { stateValue: false }, this.log);
           await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.setAttribute(BooleanState.Complete, 'stateValue', false, this.log);
+          await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.triggerEvent(BooleanState.Complete, 'stateChange', { stateValue: false }, this.log);
           if (this.config.alertTimeout > 0) {
             setTimeout(async () => {
               await this.getDeviceById(this.getId(ALERT_MASTER))?.setAttribute(BooleanState.Complete, 'stateValue', true, this.log);
+              await this.getDeviceById(this.getId(ALERT_MASTER))?.triggerEvent(BooleanState.Complete, 'stateChange', { stateValue: true }, this.log);
               await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.setAttribute(BooleanState.Complete, 'stateValue', true, this.log);
+              await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.triggerEvent(BooleanState.Complete, 'stateChange', { stateValue: true }, this.log);
             }, this.config.alertTimeout).unref();
           }
         });
@@ -167,18 +209,43 @@ export class Platform extends MatterbridgeDynamicPlatform {
     return 'security-' + name.toLowerCase().replaceAll(' ', '-');
   }
 
+  /**
+   * Set the mode to off by unlocking all other modes.
+   * It also updates the current mode and the last security mode so it can be restored on restart.
+   */
   async setModeOff(): Promise<void> {
+    this.currentMode = MODE_OFF;
+    await this.context?.set('LastSecurityMode', MODE_OFF);
     await this.getDeviceById(this.getId(MODE_OFF))?.setAttribute(DoorLock.Complete, 'lockState', DoorLock.LockState.Locked, this.log);
     await this.syncronizeModes(MODE_OFF);
   }
 
+  /**
+   * Syncronize the modes unlocking all other modes.
+   * It also updates the current mode and the last security mode so it can be restored on restart.
+   *
+   * @param {Modes} mode - The current mode, all other modes will be unlocked.
+   */
   async syncronizeModes(mode: Modes): Promise<void> {
     this.log.info(`Synchronizing modes for mode ${mode}`);
+    this.currentMode = mode;
+    await this.context?.set('LastSecurityMode', mode);
     for (const m of modes) {
       const device = this.getDeviceById(this.getId(m));
       if (!device) continue;
       if (device.id === this.getId(mode)) continue;
       await device.setAttribute(DoorLock.Complete, 'lockState', DoorLock.LockState.Unlocked, this.log);
+    }
+  }
+
+  /**
+   * Reset all alerts by setting their stateValue to true and triggering a stateChange event.
+   * This can be used to reset the alerts after they have been triggered if the alertTimeout is set to 0 or to a very high value.
+   */
+  async resetAlerts(): Promise<void> {
+    for (const alert of alerts) {
+      await this.getDeviceById(this.getId(alert))?.setAttribute(BooleanState.Complete, 'stateValue', true, this.log);
+      await this.getDeviceById(this.getId(alert))?.triggerEvent(BooleanState.Complete, 'stateChange', { stateValue: true }, this.log);
     }
   }
 }

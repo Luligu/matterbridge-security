@@ -64,7 +64,7 @@
     "*.schema.json"
   ],
   "scripts": {
-    "start": "matterbridge",
+    "start": "npm run build && matterbridge",
     "build": "tsc --project tsconfig.build.json",
     "buildProduction": "tsc --project tsconfig.build.production.json",
     "clean": "npx shx rm -rf *.tsbuildinfo dist",
