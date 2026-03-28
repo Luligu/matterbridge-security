@@ -99,6 +99,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
         .addRequiredClusterServers()
         .addCommandHandler('DoorLock.lockDoor', async ({ context }) => {
           this.log.info(`Received lockDoor command for mode: ${mode}`);
+          await this.getDeviceById(this.getId(mode))?.triggerEvent(DoorLock.Complete, 'doorLockAlarm', { alarmCode: DoorLock.AlarmCode.DoorForcedOpen }, this.log);
           await this.getDeviceById(this.getId(mode))?.triggerEvent(
             DoorLock.Complete,
             'lockOperation',
@@ -116,6 +117,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
         })
         .addCommandHandler('DoorLock.unlockDoor', async ({ context }) => {
           this.log.info(`Received unlockDoor command for mode: ${mode}`);
+          await this.getDeviceById(this.getId(mode))?.triggerEvent(DoorLock.Complete, 'doorLockAlarm', { alarmCode: DoorLock.AlarmCode.DoorForcedOpen }, this.log);
           await this.getDeviceById(this.getId(mode))?.triggerEvent(
             DoorLock.Complete,
             'lockOperation',
