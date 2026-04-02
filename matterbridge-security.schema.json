@@ -1,0 +1,59 @@
+{
+  "title": "Matterbridge Security Plugin",
+  "description": "matterbridge-security v. 1.0.0 by https://github.com/Luligu",
+  "type": "object",
+  "properties": {
+    "name": {
+      "title": "Plugin Name",
+      "description": "Plugin name",
+      "type": "string",
+      "readOnly": true,
+      "ui:widget": "hidden"
+    },
+    "type": {
+      "title": "Plugin Type",
+      "description": "Plugin type",
+      "type": "string",
+      "readOnly": true,
+      "ui:widget": "hidden"
+    },
+    "version": {
+      "title": "Plugin Version",
+      "description": "Plugin version",
+      "type": "string",
+      "readOnly": true,
+      "ui:widget": "hidden"
+    },
+    "securityRoom": {
+      "title": "Security Room",
+      "description": "The room where the security devices will be placed.",
+      "type": "string",
+      "default": "Security"
+    },
+    "alertTimeout": {
+      "title": "Alert Timeout",
+      "description": "The timeout duration in seconds for alerts. Set 0 to disable automatic reset.",
+      "type": "number",
+      "default": 60
+    },
+    "useSwitch": {
+      "title": "Use Switch",
+      "description": "Enable the switch device types for the trigger. Don't use it with Alexa cause it doesn't support the switch type.",
+      "type": "boolean",
+      "default": false
+    },
+    "debug": {
+      "title": "Enable Debug",
+      "description": "Enable the debug for the plugin (development only)",
+      "type": "boolean",
+      "default": false
+    },
+    "unregisterOnShutdown": {
+      "title": "Unregister On Shutdown",
+      "description": "Unregister all devices on shutdown (development only)",
+      "type": "boolean",
+      "default": false,
+      "ui:widget": "hidden"
+    }
+  }
+}

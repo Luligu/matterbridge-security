@@ -1,0 +1,10 @@
+{
+  "name": "matterbridge-irobot",
+  "type": "DynamicPlatform",
+  "version": "1.0.0",
+  "securityRoom": "Security",
+  "alertTimeout": 60,
+  "useSwitch": false,
+  "debug": false,
+  "unregisterOnShutdown": false
+}
