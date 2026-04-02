@@ -25,6 +25,16 @@ Features:
 
 - Five preconfigured modes: Home, Away, Night, Vacation, Off.
 - Four preconfigured triggers: Home, Away, Night, Off.
-- Five preconfigured alarm: Home, Away, Night, Off, Master.
+- Five preconfigured alerts: Home, Away, Night, Off, Master.
 
 The plugin requires matterbridge v.3.7.2.
+
+Each mode is exclusive: the other will revert their state.
+
+Triggers will trigger the corresponding alarm and will revert immediately their state.
+
+Alerts will stay active for time specified in alertTimeout and then reset.
+
+On your controller you need to create automation that trigger each trigger.
+
+Mode vacation works exactly like mode away. Is useful to create on the controller some automations that turn on and off internal lights when you are on vacation.

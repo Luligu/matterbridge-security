@@ -170,6 +170,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
           await this.getDeviceById(this.getId(ALERT_MASTER))?.triggerEvent(BooleanState.Complete, 'stateChange', { stateValue: false }, this.log);
           await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.setAttribute(BooleanState.Complete, 'stateValue', false, this.log);
           await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.triggerEvent(BooleanState.Complete, 'stateChange', { stateValue: false }, this.log);
+          // istanbul ignore else
           if (this.config.alertTimeout > 0) {
             setTimeout(async () => {
               await this.getDeviceById(this.getId(ALERT_MASTER))?.setAttribute(BooleanState.Complete, 'stateValue', true, this.log);

@@ -6,7 +6,7 @@ If you like this project and find it useful, please consider giving it a star on
 
 ## [0.0.3] - Dev branch
 
-First published release. It requires matterbridge v.3.7.1.
+First published release. It requires matterbridge v.3.7.2.
 
 <a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="80"></a>
 

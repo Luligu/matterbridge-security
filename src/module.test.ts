@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { jest } from '@jest/globals';
+import { internalFor } from 'matterbridge';
 import {
   addMatterbridgePlatform,
   createMatterbridgeEnvironment,
@@ -18,8 +19,9 @@ import {
   stopMatterbridgeEnvironment,
 } from 'matterbridge/jestutils';
 import { DoorLock, OnOff } from 'matterbridge/matter/clusters';
+import { wait } from 'matterbridge/utils';
 
-import initializePlugin, { Modes, modes, Platform, SecurityPlatformConfig, triggers } from './module.js';
+import initializePlugin, { MODE_NIGHT, MODE_OFF, MODE_VACATION, Modes, modes, Platform, SecurityPlatformConfig, triggers } from './module.js';
 
 setupTest('Platform');
 
@@ -80,12 +82,16 @@ describe('TestPlatform', () => {
 
   it('should call onStart with reason', async () => {
     await platform.onStart('Test reason');
-    platform.shortTimeout = 1;
+    platform.shortTimeout = 10;
     platform.config.alertTimeout = 0.001;
     expect(loggerInfoSpy).toHaveBeenCalledWith('onStart called with reason:', 'Test reason');
     for (const mode of modes) {
       const device = platform.getDeviceById(platform.getId(mode));
       expect(device).toBeDefined();
+      if (!device) continue;
+      const internal = await internalFor(device, DoorLock.Complete);
+      expect(internal).toBeDefined();
+      if (internal) internal.enableTimeout = false;
       await device?.invokeBehaviorCommand(DoorLock.Complete, 'lockDoor');
       await device?.invokeBehaviorCommand(DoorLock.Complete, 'unlockDoor');
       await device?.invokeBehaviorCommand(DoorLock.Complete, 'unlockWithTimeout', { timeout: 1 });
@@ -94,7 +100,15 @@ describe('TestPlatform', () => {
       platform.currentMode = trigger.replaceAll('Trigger', 'Mode') as Modes;
       const device = platform.getDeviceById(platform.getId(trigger));
       expect(device).toBeDefined();
+      platform.currentMode = MODE_OFF;
       await device?.invokeBehaviorCommand(OnOff.Complete, 'on');
+      await wait(100);
+      platform.currentMode = MODE_VACATION;
+      await device?.invokeBehaviorCommand(OnOff.Complete, 'on');
+      await wait(100);
+      platform.currentMode = MODE_NIGHT;
+      await device?.invokeBehaviorCommand(OnOff.Complete, 'on');
+      await wait(100);
     }
     platform.config.unregisterOnShutdown = true;
     await platform.onShutdown('Test reason');
