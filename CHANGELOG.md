@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 If you like this project and find it useful, please consider giving it a star on GitHub at https://github.com/Luligu/matterbridge-security and sponsoring it.
 
-## [0.0.3] - Dev branch
+## [0.0.3] - 2026-04-02
 
 First published release. It requires matterbridge v.3.7.2.
 
