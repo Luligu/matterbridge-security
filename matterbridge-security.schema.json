@@ -36,6 +36,12 @@
       "type": "number",
       "default": 60
     },
+    "useSetters": {
+      "title": "Use Setters",
+      "description": "Enable the setters devices. This will create a device for each mode that can be used to trigger the mode change when the controller doesn't allow to lock unlock doors from presence automations.",
+      "type": "boolean",
+      "default": true
+    },
     "useSwitch": {
       "title": "Use Switch",
       "description": "Enable the switch device types for the trigger. Don't use it with Alexa cause it doesn't support the switch type.",

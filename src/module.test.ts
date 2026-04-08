@@ -1,6 +1,7 @@
 const MATTER_PORT = 6000;
 const NAME = 'Platform';
 const HOMEDIR = path.join('jest', NAME);
+const MATTER_CREATE_ONLY = true;
 
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -21,7 +22,7 @@ import {
 import { DoorLock, OnOff } from 'matterbridge/matter/clusters';
 import { wait } from 'matterbridge/utils';
 
-import initializePlugin, { MODE_NIGHT, MODE_OFF, MODE_VACATION, Modes, modes, Platform, SecurityPlatformConfig, triggers } from './module.js';
+import initializePlugin, { MODE_NIGHT, MODE_OFF, MODE_VACATION, Modes, modes, Platform, SecurityPlatformConfig, setters, triggers } from './module.js';
 
 setupTest('Platform');
 
@@ -32,8 +33,8 @@ describe('TestPlatform', () => {
 
   beforeAll(async () => {
     // Create Matterbridge environment
-    await createMatterbridgeEnvironment(NAME);
-    await startMatterbridgeEnvironment(MATTER_PORT);
+    await createMatterbridgeEnvironment(NAME, MATTER_CREATE_ONLY);
+    await startMatterbridgeEnvironment(MATTER_PORT, MATTER_CREATE_ONLY);
   });
 
   beforeEach(() => {
@@ -48,8 +49,8 @@ describe('TestPlatform', () => {
 
   afterAll(async () => {
     // Destroy Matterbridge environment
-    await stopMatterbridgeEnvironment();
-    await destroyMatterbridgeEnvironment();
+    await stopMatterbridgeEnvironment(MATTER_CREATE_ONLY);
+    await destroyMatterbridgeEnvironment(undefined, undefined, !MATTER_CREATE_ONLY);
 
     // Restore all mocks
     jest.restoreAllMocks();
@@ -96,6 +97,16 @@ describe('TestPlatform', () => {
       await device?.invokeBehaviorCommand(DoorLock.Complete, 'unlockDoor');
       await device?.invokeBehaviorCommand(DoorLock.Complete, 'unlockWithTimeout', { timeout: 1 });
     }
+
+    // Test setters
+    for (const setter of setters) {
+      const device = platform.getDeviceById(platform.getId(setter));
+      expect(device).toBeDefined();
+      await device?.invokeBehaviorCommand(OnOff.Complete, 'on');
+      await wait(100);
+    }
+
+    // Test triggers
     for (const trigger of triggers) {
       platform.currentMode = trigger.replaceAll('Trigger', 'Mode') as Modes;
       const device = platform.getDeviceById(platform.getId(trigger));
