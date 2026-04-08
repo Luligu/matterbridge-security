@@ -21,6 +21,8 @@ If you like this project and find it useful, please consider giving it a star on
 - [devcontainer]: Leave matterbridge scripts in the cloned repo.
 - [scripts]: Update mb-run script.
 
+<a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="80"></a>
+
 ## [0.0.3] - 2026-04-02
 
 First published release. It requires matterbridge v.3.7.2.
