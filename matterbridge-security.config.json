@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "securityRoom": "Security",
   "alertTimeout": 60,
+  "useSetters": true,
   "useSwitch": false,
   "debug": false,
   "unregisterOnShutdown": false

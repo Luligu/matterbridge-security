@@ -21,6 +21,12 @@ export const MODE_NIGHT = 'Mode Night';
 export const MODE_VACATION = 'Mode Vacation';
 export const MODE_OFF = 'Mode Off';
 
+export const SET_AWAY = 'Set Away'; // Set the mode to away, can be used for automations
+export const SET_HOME = 'Set Home'; // Set the mode to home, can be used for automations
+export const SET_NIGHT = 'Set Night'; // Set the mode to night, can be used for automations
+export const SET_VACATION = 'Set Vacation'; // Set the mode to vacation, can be used for automations
+export const SET_OFF = 'Set Off'; // Set the mode to off, can be used for automations
+
 export const TRIGGER_AWAY = 'Trigger Away'; // Trigger from contact sensors and presence/volumetric sensors
 export const TRIGGER_HOME = 'Trigger Home'; // Trigger from security sensors like gas smoke levels, water leak, etc.
 export const TRIGGER_NIGHT = 'Trigger Night'; // Trigger from contact sensors
@@ -34,11 +40,15 @@ export const ALERT_MASTER = 'Alert Master'; // Alert for master mode, can be use
 
 export const modes: Modes[] = [MODE_AWAY, MODE_HOME, MODE_NIGHT, MODE_VACATION, MODE_OFF];
 
+export const setters: Setters[] = [SET_AWAY, SET_HOME, SET_NIGHT, SET_VACATION, SET_OFF];
+
 export const triggers: Triggers[] = [TRIGGER_AWAY, TRIGGER_HOME, TRIGGER_NIGHT, TRIGGER_24H];
 
 export const alerts: Alerts[] = [ALERT_AWAY, ALERT_HOME, ALERT_NIGHT, ALERT_24H, ALERT_MASTER];
 
 export type Modes = typeof MODE_AWAY | typeof MODE_HOME | typeof MODE_NIGHT | typeof MODE_VACATION | typeof MODE_OFF;
+
+export type Setters = typeof SET_AWAY | typeof SET_HOME | typeof SET_NIGHT | typeof SET_VACATION | typeof SET_OFF;
 
 export type Triggers = typeof TRIGGER_AWAY | typeof TRIGGER_HOME | typeof TRIGGER_NIGHT | typeof TRIGGER_24H;
 
@@ -47,6 +57,7 @@ export type Alerts = typeof ALERT_AWAY | typeof ALERT_HOME | typeof ALERT_NIGHT 
 export type SecurityPlatformConfig = PlatformConfig & {
   securityRoom: string;
   alertTimeout: number;
+  useSetters: boolean;
   useSwitch: boolean;
 };
 
@@ -80,6 +91,15 @@ export class Platform extends MatterbridgeDynamicPlatform {
     }
 
     this.log.info('Initializing platform:', this.config.name);
+
+    // Set default values for config options if they are not set in old versions of the config
+    // istanbul ignore next cause is just to prevent errors in case the config is missing some options, it should never happen but it's better to be safe
+    {
+      config.securityRoom = config.securityRoom ?? 'Security';
+      config.alertTimeout = config.alertTimeout ?? 60;
+      config.useSetters = config.useSetters ?? true;
+      config.useSwitch = config.useSwitch ?? false;
+    }
 
     this.log.info('Finished initializing platform:', this.config.name);
   }
@@ -147,6 +167,40 @@ export class Platform extends MatterbridgeDynamicPlatform {
     this.log.notice(`Last security mode: ${lastSecurityMode}`);
     await this.getDeviceById(this.getId(lastSecurityMode))?.setAttribute(DoorLock.Complete, 'lockState', DoorLock.LockState.Locked, this.log);
     await this.syncronizeModes(lastSecurityMode);
+
+    // Create devices for setters
+    // istanbul ignore else
+    if (this.config.useSetters) {
+      for (const setter of setters) {
+        const setterDevice = new MatterbridgeEndpoint(triggerDeviceTypes, { id: `${this.getId(setter)}` })
+          .createDefaultBridgedDeviceBasicInformationClusterServer(this.getName(setter), this.getSerial(setter), undefined, 'Matterbridge', 'Matterbridge Security Plugin')
+          .addRequiredClusterServers()
+          .addCommandHandler('OnOff.on', async () => {
+            this.log.info(`Received on command for setter: ${setter}`);
+            // Restore the setter state after a short timeout
+            setTimeout(async () => {
+              this.log.debug(`Resetting setter state to off after on command for setter: ${setter}`);
+              await setterDevice.setAttribute(OnOff.Complete, 'onOff', false);
+            }, this.shortTimeout).unref();
+            // istanbul ignore else
+            if (setter === SET_AWAY) {
+              await this.getDeviceById(this.getId(MODE_AWAY))?.setAttribute(DoorLock.Complete, 'lockState', DoorLock.LockState.Locked, this.log);
+              await this.syncronizeModes(MODE_AWAY);
+            } else if (setter === SET_HOME) {
+              await this.getDeviceById(this.getId(MODE_HOME))?.setAttribute(DoorLock.Complete, 'lockState', DoorLock.LockState.Locked, this.log);
+              await this.syncronizeModes(MODE_HOME);
+            } else if (setter === SET_NIGHT) {
+              await this.getDeviceById(this.getId(MODE_NIGHT))?.setAttribute(DoorLock.Complete, 'lockState', DoorLock.LockState.Locked, this.log);
+              await this.syncronizeModes(MODE_NIGHT);
+            } else if (setter === SET_VACATION) {
+              await this.getDeviceById(this.getId(MODE_VACATION))?.setAttribute(DoorLock.Complete, 'lockState', DoorLock.LockState.Locked, this.log);
+              await this.syncronizeModes(MODE_VACATION);
+            } else if (setter === SET_OFF) await this.setModeOff();
+          });
+        await this.registerDevice(setterDevice);
+        await setterDevice.setAttribute(OnOff.Complete, 'onOff', false, this.log);
+      }
+    }
 
     // Create devices for triggers
     for (const trigger of triggers) {
@@ -242,7 +296,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
     if (mode === MODE_OFF) await this.resetAlerts();
     for (const m of modes) {
       const device = this.getDeviceById(this.getId(m));
-      // istanbul ignore next - This is to prevent errors in case the device is not found, it should never happen but it's better to be safe than sorry
+      // istanbul ignore next - This is to prevent errors in case the device is not found, it should never happen but it's better to be safe
       if (!device) continue;
       if (device.id === this.getId(mode)) continue;
       await device.setAttribute(DoorLock.Complete, 'lockState', DoorLock.LockState.Unlocked, this.log);
