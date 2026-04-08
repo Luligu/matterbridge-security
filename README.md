@@ -30,14 +30,57 @@ Features:
 
 The plugin requires matterbridge v.3.7.2.
 
+### Modes
+
+| Mode     | Use                                                               |
+| -------- | ----------------------------------------------------------------- |
+| Home     | Standard mode when you are at home.                               |
+| Away     | Use when nobody is home (full protection).                        |
+| Night    | Use at night (typically perimeter/partial protection).            |
+| Vacation | Same as Away; useful for extended absences and light automations. |
+| Off      | Disables the security system.                                     |
+
 Each mode is exclusive: the other will revert their state.
+
+Mode vacation works exactly like mode away. Is useful to create on the controller some automations that turn on and off internal lights when you are on vacation.
+
+### Setters
+
+| Setter   | Use                               |
+| -------- | --------------------------------- |
+| Home     | Sets the system mode to Home.     |
+| Away     | Sets the system mode to Away.     |
+| Night    | Sets the system mode to Night.    |
+| Vacation | Sets the system mode to Vacation. |
+| Off      | Sets the system mode to Off.      |
 
 Setters will set the corresponding mode and will revert immediately their state.
 
+Is usefull when the controller doesn't allow to lock unlock doors from presence automations. They are enabled by the `useSetters` config.
+
+### Triggers
+
+Triggers are momentary switches you can use in your controller automations to start an alarm.
+
+| Trigger | Use                                       |
+| ------- | ----------------------------------------- |
+| Home    | Triggers the alarm associated with Home.  |
+| Away    | Triggers the alarm associated with Away.  |
+| Night   | Triggers the alarm associated with Night. |
+| 24h     | Triggers the alarm associated with 24h.   |
+
 Triggers will trigger the corresponding alarm and will revert immediately their state.
 
-Alerts will stay active for time specified in alertTimeout and then reset.
+On your controller you need to create an automation that trigger each trigger.
 
-On your controller you need to create automation that trigger each trigger.
+### Alerts
 
-Mode vacation works exactly like mode away. Is useful to create on the controller some automations that turn on and off internal lights when you are on vacation.
+Alerts are the alarm states exposed by the plugin; they stay active for the configured `alertTimeout` and then reset.
+
+| Alert  | Use                                                |
+| ------ | -------------------------------------------------- |
+| Home   | Alert state for Home.                              |
+| Away   | Alert state for Away.                              |
+| Night  | Alert state for Night.                             |
+| 24h    | Alert state for 24h.                               |
+| Master | General alert state (not tied to a specific mode). |
