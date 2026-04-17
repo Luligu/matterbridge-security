@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 If you like this project and find it useful, please consider giving it a star on GitHub at https://github.com/Luligu/matterbridge-security and sponsoring it.
 
+## [1.0.1] - Dev branch
+
+### Changed
+
+- [package]: Preliminary compatibility update to `matterbridge 3.8.0`, matter 1.5.1 and matter.js 0.17.0.
+- [package]: Update dependencies.
+- [package]: Bump package to `automator` v.3.1.6.
+- [package]: Bump `eslint` to v.10.2.1.
+- [package]: Bump `typescript-eslint` to v.8.58.2.
+- [agent]: Add `.vscode\tasks.json`.
+- [agent]: Add `.github\copilot-instructions.md` for copilot.
+- [agent]: Add `.claude\CLAUDE.md` for claude.
+- [agent]: Add agent custom instructions (`testing`) for copilot and claude.
+- [agent]: Add agent custom instructions (`matterbridge`) for copilot and claude.
+
+<a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="80"></a>
+
 ## [1.0.0] - 2026-04-08
 
 ### Added
