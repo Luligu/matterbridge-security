@@ -1,6 +1,5 @@
 const MATTER_PORT = 6000;
 const NAME = 'Platform';
-const HOMEDIR = path.join('jest', NAME);
 const MATTER_CREATE_ONLY = true;
 
 import { readFileSync } from 'node:fs';
@@ -24,7 +23,7 @@ import { wait } from 'matterbridge/utils';
 
 import initializePlugin, { MODE_NIGHT, MODE_OFF, MODE_VACATION, Modes, modes, Platform, SecurityPlatformConfig, setters, triggers } from './module.js';
 
-setupTest('Platform');
+setupTest(NAME);
 
 describe('TestPlatform', () => {
   let platform: Platform;
@@ -33,7 +32,7 @@ describe('TestPlatform', () => {
 
   beforeAll(async () => {
     // Create Matterbridge environment
-    await createMatterbridgeEnvironment(NAME, MATTER_CREATE_ONLY);
+    await createMatterbridgeEnvironment();
     await startMatterbridgeEnvironment(MATTER_PORT, MATTER_CREATE_ONLY);
   });
 

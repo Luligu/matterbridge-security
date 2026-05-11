@@ -21,12 +21,12 @@
 
 This plugin allows you to create a security system.
 
-Features:
+## Features
 
 - Five preconfigured modes: Home, Away, Night, Vacation, Off.
 - Five preconfigured setters: Home, Away, Night, Vacation, Off.
 - Four preconfigured triggers: Home, Away, Night, Off.
-- Five preconfigured alerts: Home, Away, Night, Off, Master.
+- Five preconfigured alerts: Home, Away, Night, 24h, Master.
 
 The plugin requires matterbridge v.3.7.2.
 
