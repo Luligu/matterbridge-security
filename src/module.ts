@@ -158,8 +158,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
             })();
           }, this.shortTimeout).unref();
         })
-        // eslint-disable-next-line @typescript-eslint/require-await
-        .addCommandHandler('DoorLock.unlockWithTimeout', async () => {
+        .addCommandHandler('DoorLock.unlockWithTimeout', () => {
           this.log.info(`Received unlockWithTimeout command for mode: ${mode}`);
         });
       await this.registerDevice(doorLock);
