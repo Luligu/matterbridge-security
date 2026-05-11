@@ -151,12 +151,14 @@ export class Platform extends MatterbridgeDynamicPlatform {
             },
             this.log,
           );
-          setTimeout(async () => {
-            this.log.debug(`Resetting mode to off after unlock command for mode: ${mode}`);
-            await this.setModeOff();
+          setTimeout(() => {
+            void (async () => {
+              this.log.debug(`Resetting mode to off after unlock command for mode: ${mode}`);
+              await this.setModeOff();
+            })();
           }, this.shortTimeout).unref();
         })
-        .addCommandHandler('DoorLock.unlockWithTimeout', async () => {
+        .addCommandHandler('DoorLock.unlockWithTimeout', () => {
           this.log.info(`Received unlockWithTimeout command for mode: ${mode}`);
         });
       await this.registerDevice(doorLock);
@@ -178,9 +180,11 @@ export class Platform extends MatterbridgeDynamicPlatform {
           .addCommandHandler('OnOff.on', async () => {
             this.log.info(`Received on command for setter: ${setter}`);
             // Restore the setter state after a short timeout
-            setTimeout(async () => {
-              this.log.debug(`Resetting setter state to off after on command for setter: ${setter}`);
-              await setterDevice.setAttribute(OnOff.Complete, 'onOff', false);
+            setTimeout(() => {
+              void (async () => {
+                this.log.debug(`Resetting setter state to off after on command for setter: ${setter}`);
+                await setterDevice.setAttribute(OnOff.Complete, 'onOff', false);
+              })();
             }, this.shortTimeout).unref();
             // istanbul ignore else
             if (setter === SET_AWAY) {
@@ -210,9 +214,11 @@ export class Platform extends MatterbridgeDynamicPlatform {
         .addCommandHandler('OnOff.on', async () => {
           this.log.info(`Received on command for trigger: ${trigger}`);
           // Restore the trigger state after a short timeout
-          setTimeout(async () => {
-            this.log.debug(`Resetting trigger state to off after on command for trigger: ${trigger}`);
-            await triggerDevice.setAttribute(OnOff.Complete, 'onOff', false);
+          setTimeout(() => {
+            void (async () => {
+              this.log.debug(`Resetting trigger state to off after on command for trigger: ${trigger}`);
+              await triggerDevice.setAttribute(OnOff.Complete, 'onOff', false);
+            })();
           }, this.shortTimeout).unref();
           if (this.currentMode === MODE_OFF) return;
           if (trigger === TRIGGER_AWAY && this.currentMode !== MODE_AWAY && this.currentMode !== MODE_VACATION) return;
@@ -226,11 +232,13 @@ export class Platform extends MatterbridgeDynamicPlatform {
           await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.triggerEvent(BooleanState.Complete, 'stateChange', { stateValue: false }, this.log);
           // istanbul ignore else
           if (this.config.alertTimeout > 0) {
-            setTimeout(async () => {
-              await this.getDeviceById(this.getId(ALERT_MASTER))?.setAttribute(BooleanState.Complete, 'stateValue', true, this.log);
-              await this.getDeviceById(this.getId(ALERT_MASTER))?.triggerEvent(BooleanState.Complete, 'stateChange', { stateValue: true }, this.log);
-              await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.setAttribute(BooleanState.Complete, 'stateValue', true, this.log);
-              await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.triggerEvent(BooleanState.Complete, 'stateChange', { stateValue: true }, this.log);
+            setTimeout(() => {
+              void (async () => {
+                await this.getDeviceById(this.getId(ALERT_MASTER))?.setAttribute(BooleanState.Complete, 'stateValue', true, this.log);
+                await this.getDeviceById(this.getId(ALERT_MASTER))?.triggerEvent(BooleanState.Complete, 'stateChange', { stateValue: true }, this.log);
+                await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.setAttribute(BooleanState.Complete, 'stateValue', true, this.log);
+                await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.triggerEvent(BooleanState.Complete, 'stateChange', { stateValue: true }, this.log);
+              })();
             }, this.config.alertTimeout * 1000).unref();
           }
         });
