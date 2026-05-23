@@ -92,8 +92,8 @@ describe('TestPlatform', () => {
       const internal = await internalFor(device, DoorLock.Complete);
       expect(internal).toBeDefined();
       if (internal) internal.enableTimeout = false;
-      await device?.invokeBehaviorCommand(DoorLock.Complete, 'lockDoor');
-      await device?.invokeBehaviorCommand(DoorLock.Complete, 'unlockDoor');
+      await device?.invokeBehaviorCommand(DoorLock.Complete, 'lockDoor', {});
+      await device?.invokeBehaviorCommand(DoorLock.Complete, 'unlockDoor', {});
       await device?.invokeBehaviorCommand(DoorLock.Complete, 'unlockWithTimeout', { timeout: 1 });
     }
 
