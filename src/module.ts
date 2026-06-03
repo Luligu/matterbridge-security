@@ -109,7 +109,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
 
     // Make sure the platform is ready before registering devices
     await this.ready;
-    const triggerDeviceTypes: AtLeastOne<DeviceTypeDefinition> = this.config.useSwitch ? [onOffSwitch, bridgedNode] : [onOffMountedSwitch, onOffOutlet, bridgedNode];
+    const triggerSetterDeviceTypes: AtLeastOne<DeviceTypeDefinition> = this.config.useSwitch ? [onOffSwitch, bridgedNode] : [onOffMountedSwitch, onOffOutlet, bridgedNode];
 
     // Create devices for modes
     for (const mode of modes) {
@@ -127,7 +127,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
               lockOperationType: DoorLock.LockOperationType.Lock,
               operationSource: DoorLock.OperationSource.Remote,
               userIndex: null,
-              fabricIndex: context?.fabric ?? null,
+              fabricIndex: context?.fabric ?? /* istanbul ignore next */ null,
               sourceNode: null,
               credentials: null,
             },
@@ -145,7 +145,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
               lockOperationType: DoorLock.LockOperationType.Unlock,
               operationSource: DoorLock.OperationSource.Remote,
               userIndex: null,
-              fabricIndex: context?.fabric ?? null,
+              fabricIndex: context?.fabric ?? /* istanbul ignore next */ null,
               sourceNode: null,
               credentials: null,
             },
@@ -174,8 +174,11 @@ export class Platform extends MatterbridgeDynamicPlatform {
     // istanbul ignore else
     if (this.config.useSetters) {
       for (const setter of setters) {
-        const setterDevice = new MatterbridgeEndpoint(triggerDeviceTypes, { id: `${this.getId(setter)}` })
+        const setterDevice = new MatterbridgeEndpoint(triggerSetterDeviceTypes, { id: `${this.getId(setter)}` })
           .createDefaultBridgedDeviceBasicInformationClusterServer(this.getName(setter), this.getSerial(setter), undefined, 'Matterbridge', 'Matterbridge Security Plugin')
+          // Extraneous server cluster for Apple Home app to recognize the device as a switch and not a plug.
+          // The on/off cluster server will be removed from required clusters of onOffSwitch in a future release.
+          .createDefaultOnOffClusterServer()
           .addRequiredClusterServers()
           .addCommandHandler('OnOff.on', async () => {
             this.log.info(`Received on command for setter: ${setter}`);
@@ -208,8 +211,11 @@ export class Platform extends MatterbridgeDynamicPlatform {
 
     // Create devices for triggers
     for (const trigger of triggers) {
-      const triggerDevice = new MatterbridgeEndpoint(triggerDeviceTypes, { id: `${this.getId(trigger)}` })
+      const triggerDevice = new MatterbridgeEndpoint(triggerSetterDeviceTypes, { id: `${this.getId(trigger)}` })
         .createDefaultBridgedDeviceBasicInformationClusterServer(this.getName(trigger), this.getSerial(trigger), undefined, 'Matterbridge', 'Matterbridge Security Plugin')
+        // Extraneous server cluster for Apple Home app to recognize the device as a switch and not a plug.
+        // The on/off cluster server will be removed from required clusters of onOffSwitch in a future release.
+        .createDefaultOnOffClusterServer()
         .addRequiredClusterServers()
         .addCommandHandler('OnOff.on', async () => {
           this.log.info(`Received on command for trigger: ${trigger}`);
