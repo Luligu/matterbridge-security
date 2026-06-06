@@ -86,8 +86,8 @@ export class Platform extends MatterbridgeDynamicPlatform {
     super(matterbridge, log, config);
 
     // Verify that Matterbridge is the correct version
-    if (this.verifyMatterbridgeVersion === undefined || typeof this.verifyMatterbridgeVersion !== 'function' || !this.verifyMatterbridgeVersion('3.7.2')) {
-      throw new Error(`This plugin requires Matterbridge version >= "3.7.2". Please update Matterbridge to the latest version in the frontend.`);
+    if (typeof this.verifyMatterbridgeVersion !== 'function' || !this.verifyMatterbridgeVersion('3.8.0')) {
+      throw new Error(`This plugin requires Matterbridge version >= "3.8.0". Please update Matterbridge to the latest version in the frontend.`);
     }
 
     this.log.info('Initializing platform:', this.config.name);
@@ -116,12 +116,12 @@ export class Platform extends MatterbridgeDynamicPlatform {
       const doorLock = new MatterbridgeEndpoint([doorLockDevice, bridgedNode], { id: `${this.getId(mode)}` })
         .createDefaultBridgedDeviceBasicInformationClusterServer(this.getName(mode), this.getSerial(mode), undefined, 'Matterbridge', 'Matterbridge Security Plugin')
         .createDefaultDoorLockClusterServer()
-        .addRequiredClusterServers()
+        .addRequiredClusters()
         .addCommandHandler('DoorLock.lockDoor', async ({ context }) => {
           this.log.info(`Received lockDoor command for mode: ${mode}`);
-          await this.getDeviceById(this.getId(mode))?.triggerEvent(DoorLock.Complete, 'doorLockAlarm', { alarmCode: DoorLock.AlarmCode.DoorForcedOpen }, this.log);
+          await this.getDeviceById(this.getId(mode))?.triggerEvent(DoorLock, 'doorLockAlarm', { alarmCode: DoorLock.AlarmCode.DoorForcedOpen }, this.log);
           await this.getDeviceById(this.getId(mode))?.triggerEvent(
-            DoorLock.Complete,
+            DoorLock,
             'lockOperation',
             {
               lockOperationType: DoorLock.LockOperationType.Lock,
@@ -137,9 +137,9 @@ export class Platform extends MatterbridgeDynamicPlatform {
         })
         .addCommandHandler('DoorLock.unlockDoor', async ({ context }) => {
           this.log.info(`Received unlockDoor command for mode: ${mode}`);
-          await this.getDeviceById(this.getId(mode))?.triggerEvent(DoorLock.Complete, 'doorLockAlarm', { alarmCode: DoorLock.AlarmCode.DoorForcedOpen }, this.log);
+          await this.getDeviceById(this.getId(mode))?.triggerEvent(DoorLock, 'doorLockAlarm', { alarmCode: DoorLock.AlarmCode.DoorForcedOpen }, this.log);
           await this.getDeviceById(this.getId(mode))?.triggerEvent(
-            DoorLock.Complete,
+            DoorLock,
             'lockOperation',
             {
               lockOperationType: DoorLock.LockOperationType.Unlock,
@@ -162,12 +162,12 @@ export class Platform extends MatterbridgeDynamicPlatform {
           this.log.info(`Received unlockWithTimeout command for mode: ${mode}`);
         });
       await this.registerDevice(doorLock);
-      await doorLock.setAttribute(DoorLock.Complete, 'lockState', DoorLock.LockState.Unlocked, this.log);
+      await doorLock.setAttribute(DoorLock, 'lockState', DoorLock.LockState.Unlocked, this.log);
     }
     const lastSecurityMode: Modes = (await this.context?.get('LastSecurityMode', MODE_OFF)) ?? MODE_OFF;
     this.currentMode = lastSecurityMode;
     this.log.notice(`Last security mode: ${lastSecurityMode}`);
-    await this.getDeviceById(this.getId(lastSecurityMode))?.setAttribute(DoorLock.Complete, 'lockState', DoorLock.LockState.Locked, this.log);
+    await this.getDeviceById(this.getId(lastSecurityMode))?.setAttribute(DoorLock, 'lockState', DoorLock.LockState.Locked, this.log);
     await this.syncronizeModes(lastSecurityMode);
 
     // Create devices for setters
@@ -179,33 +179,33 @@ export class Platform extends MatterbridgeDynamicPlatform {
           // Extraneous server cluster for Apple Home app to recognize the device as a switch and not a plug.
           // The on/off cluster server will be removed from required clusters of onOffSwitch in a future release.
           .createDefaultOnOffClusterServer()
-          .addRequiredClusterServers()
+          .addRequiredClusters()
           .addCommandHandler('OnOff.on', async () => {
             this.log.info(`Received on command for setter: ${setter}`);
             // Restore the setter state after a short timeout
             setTimeout(() => {
               void (async () => {
                 this.log.debug(`Resetting setter state to off after on command for setter: ${setter}`);
-                await setterDevice.setAttribute(OnOff.Complete, 'onOff', false);
+                await setterDevice.setAttribute(OnOff, 'onOff', false);
               })();
             }, this.shortTimeout).unref();
             // istanbul ignore else
             if (setter === SET_AWAY) {
-              await this.getDeviceById(this.getId(MODE_AWAY))?.setAttribute(DoorLock.Complete, 'lockState', DoorLock.LockState.Locked, this.log);
+              await this.getDeviceById(this.getId(MODE_AWAY))?.setAttribute(DoorLock, 'lockState', DoorLock.LockState.Locked, this.log);
               await this.syncronizeModes(MODE_AWAY);
             } else if (setter === SET_HOME) {
-              await this.getDeviceById(this.getId(MODE_HOME))?.setAttribute(DoorLock.Complete, 'lockState', DoorLock.LockState.Locked, this.log);
+              await this.getDeviceById(this.getId(MODE_HOME))?.setAttribute(DoorLock, 'lockState', DoorLock.LockState.Locked, this.log);
               await this.syncronizeModes(MODE_HOME);
             } else if (setter === SET_NIGHT) {
-              await this.getDeviceById(this.getId(MODE_NIGHT))?.setAttribute(DoorLock.Complete, 'lockState', DoorLock.LockState.Locked, this.log);
+              await this.getDeviceById(this.getId(MODE_NIGHT))?.setAttribute(DoorLock, 'lockState', DoorLock.LockState.Locked, this.log);
               await this.syncronizeModes(MODE_NIGHT);
             } else if (setter === SET_VACATION) {
-              await this.getDeviceById(this.getId(MODE_VACATION))?.setAttribute(DoorLock.Complete, 'lockState', DoorLock.LockState.Locked, this.log);
+              await this.getDeviceById(this.getId(MODE_VACATION))?.setAttribute(DoorLock, 'lockState', DoorLock.LockState.Locked, this.log);
               await this.syncronizeModes(MODE_VACATION);
             } else if (setter === SET_OFF) await this.setModeOff();
           });
         await this.registerDevice(setterDevice);
-        await setterDevice.setAttribute(OnOff.Complete, 'onOff', false, this.log);
+        await setterDevice.setAttribute(OnOff, 'onOff', false, this.log);
       }
     }
 
@@ -216,14 +216,14 @@ export class Platform extends MatterbridgeDynamicPlatform {
         // Extraneous server cluster for Apple Home app to recognize the device as a switch and not a plug.
         // The on/off cluster server will be removed from required clusters of onOffSwitch in a future release.
         .createDefaultOnOffClusterServer()
-        .addRequiredClusterServers()
+        .addRequiredClusters()
         .addCommandHandler('OnOff.on', async () => {
           this.log.info(`Received on command for trigger: ${trigger}`);
           // Restore the trigger state after a short timeout
           setTimeout(() => {
             void (async () => {
               this.log.debug(`Resetting trigger state to off after on command for trigger: ${trigger}`);
-              await triggerDevice.setAttribute(OnOff.Complete, 'onOff', false);
+              await triggerDevice.setAttribute(OnOff, 'onOff', false);
             })();
           }, this.shortTimeout).unref();
           if (this.currentMode === MODE_OFF) return;
@@ -232,33 +232,33 @@ export class Platform extends MatterbridgeDynamicPlatform {
           else if (trigger === TRIGGER_NIGHT && this.currentMode !== MODE_NIGHT) return;
           else this.log.info(`Trigger ${trigger} activated for mode ${this.currentMode}, activating alerts...`);
           // Trigger the master alert and the alert device associated with the trigger and reset the trigger after the alert timeout
-          await this.getDeviceById(this.getId(ALERT_MASTER))?.setAttribute(BooleanState.Complete, 'stateValue', false, this.log);
-          await this.getDeviceById(this.getId(ALERT_MASTER))?.triggerEvent(BooleanState.Complete, 'stateChange', { stateValue: false }, this.log);
-          await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.setAttribute(BooleanState.Complete, 'stateValue', false, this.log);
-          await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.triggerEvent(BooleanState.Complete, 'stateChange', { stateValue: false }, this.log);
+          await this.getDeviceById(this.getId(ALERT_MASTER))?.setAttribute(BooleanState, 'stateValue', false, this.log);
+          await this.getDeviceById(this.getId(ALERT_MASTER))?.triggerEvent(BooleanState, 'stateChange', { stateValue: false }, this.log);
+          await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.setAttribute(BooleanState, 'stateValue', false, this.log);
+          await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.triggerEvent(BooleanState, 'stateChange', { stateValue: false }, this.log);
           // istanbul ignore else
           if (this.config.alertTimeout > 0) {
             setTimeout(() => {
               void (async () => {
-                await this.getDeviceById(this.getId(ALERT_MASTER))?.setAttribute(BooleanState.Complete, 'stateValue', true, this.log);
-                await this.getDeviceById(this.getId(ALERT_MASTER))?.triggerEvent(BooleanState.Complete, 'stateChange', { stateValue: true }, this.log);
-                await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.setAttribute(BooleanState.Complete, 'stateValue', true, this.log);
-                await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.triggerEvent(BooleanState.Complete, 'stateChange', { stateValue: true }, this.log);
+                await this.getDeviceById(this.getId(ALERT_MASTER))?.setAttribute(BooleanState, 'stateValue', true, this.log);
+                await this.getDeviceById(this.getId(ALERT_MASTER))?.triggerEvent(BooleanState, 'stateChange', { stateValue: true }, this.log);
+                await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.setAttribute(BooleanState, 'stateValue', true, this.log);
+                await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.triggerEvent(BooleanState, 'stateChange', { stateValue: true }, this.log);
               })();
             }, this.config.alertTimeout * 1000).unref();
           }
         });
       await this.registerDevice(triggerDevice);
-      await triggerDevice.setAttribute(OnOff.Complete, 'onOff', false, this.log);
+      await triggerDevice.setAttribute(OnOff, 'onOff', false, this.log);
     }
 
     // Create devices for alerts
     for (const alert of alerts) {
       const alertDevice = new MatterbridgeEndpoint([contactSensor, bridgedNode], { id: `${this.getId(alert)}` })
         .createDefaultBridgedDeviceBasicInformationClusterServer(this.getName(alert), this.getSerial(alert), undefined, 'Matterbridge', 'Matterbridge Security Plugin')
-        .addRequiredClusterServers();
+        .addRequiredClusters();
       await this.registerDevice(alertDevice);
-      await alertDevice.setAttribute(BooleanState.Complete, 'stateValue', true, this.log);
+      await alertDevice.setAttribute(BooleanState, 'stateValue', true, this.log);
     }
   }
 
@@ -292,7 +292,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
   async setModeOff(): Promise<void> {
     this.currentMode = MODE_OFF;
     await this.context?.set('LastSecurityMode', MODE_OFF);
-    await this.getDeviceById(this.getId(MODE_OFF))?.setAttribute(DoorLock.Complete, 'lockState', DoorLock.LockState.Locked, this.log);
+    await this.getDeviceById(this.getId(MODE_OFF))?.setAttribute(DoorLock, 'lockState', DoorLock.LockState.Locked, this.log);
     await this.syncronizeModes(MODE_OFF);
     await this.resetAlerts();
   }
@@ -313,7 +313,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
       // istanbul ignore next - This is to prevent errors in case the device is not found, it should never happen but it's better to be safe
       if (!device) continue;
       if (device.id === this.getId(mode)) continue;
-      await device.setAttribute(DoorLock.Complete, 'lockState', DoorLock.LockState.Unlocked, this.log);
+      await device.setAttribute(DoorLock, 'lockState', DoorLock.LockState.Unlocked, this.log);
     }
   }
 
@@ -323,8 +323,8 @@ export class Platform extends MatterbridgeDynamicPlatform {
    */
   async resetAlerts(): Promise<void> {
     for (const alert of alerts) {
-      await this.getDeviceById(this.getId(alert))?.setAttribute(BooleanState.Complete, 'stateValue', true, this.log);
-      await this.getDeviceById(this.getId(alert))?.triggerEvent(BooleanState.Complete, 'stateChange', { stateValue: true }, this.log);
+      await this.getDeviceById(this.getId(alert))?.setAttribute(BooleanState, 'stateValue', true, this.log);
+      await this.getDeviceById(this.getId(alert))?.triggerEvent(BooleanState, 'stateChange', { stateValue: true }, this.log);
     }
   }
 }
