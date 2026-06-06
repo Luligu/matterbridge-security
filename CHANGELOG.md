@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file.
 
 If you like this project and find it useful, please consider giving it a star on GitHub at https://github.com/Luligu/matterbridge-security and sponsoring it.
 
-## [1.1.0] - Dev branch
+## [1.1.0] - 2026-06-06
 
 ### Breaking changes
 
