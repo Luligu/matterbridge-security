@@ -65,12 +65,9 @@ describe('TestPlatform', () => {
   });
 
   it('should throw error in load when version is not valid', () => {
-    const savedVersion = matterbridge.matterbridgeVersion;
-    matterbridge.matterbridgeVersion = '1.5.0';
-    expect(() => new Platform(matterbridge, log, config)).toThrow(
-      'This plugin requires Matterbridge version >= "3.7.2". Please update Matterbridge to the latest version in the frontend.',
+    expect(() => new Platform({ ...matterbridge, matterbridgeVersion: '1.5.0' }, log, config)).toThrow(
+      'This plugin requires Matterbridge version >= "3.8.0". Please update Matterbridge to the latest version in the frontend.',
     );
-    matterbridge.matterbridgeVersion = savedVersion;
   });
 
   it('should initialize platform with config name', () => {
@@ -92,8 +89,8 @@ describe('TestPlatform', () => {
       const internal = await internalFor(device, DoorLock.Complete);
       expect(internal).toBeDefined();
       if (internal) internal.enableTimeout = false;
-      await device?.invokeBehaviorCommand(DoorLock.Complete, 'lockDoor');
-      await device?.invokeBehaviorCommand(DoorLock.Complete, 'unlockDoor');
+      await device?.invokeBehaviorCommand(DoorLock.Complete, 'lockDoor', {});
+      await device?.invokeBehaviorCommand(DoorLock.Complete, 'unlockDoor', {});
       await device?.invokeBehaviorCommand(DoorLock.Complete, 'unlockWithTimeout', { timeout: 1 });
     }
 
