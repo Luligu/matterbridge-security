@@ -15,6 +15,9 @@ import { AnsiLogger } from 'matterbridge/logger';
 import { AtLeastOne } from 'matterbridge/matter';
 import { BooleanState, DoorLock, OnOff } from 'matterbridge/matter/clusters';
 
+// TODO: Remove when require Matterbridge 3.8.1 or later
+/* eslint-disable @typescript-eslint/no-deprecated */
+
 export const MODE_AWAY = 'Mode Away';
 export const MODE_HOME = 'Mode Home';
 export const MODE_NIGHT = 'Mode Night';
