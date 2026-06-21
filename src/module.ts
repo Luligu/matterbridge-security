@@ -1,22 +1,19 @@
 import {
   bridgedNode,
   contactSensor,
-  DeviceTypeDefinition,
-  doorLockDevice,
+  type DeviceTypeDefinition,
+  doorLock,
   MatterbridgeDynamicPlatform,
   MatterbridgeEndpoint,
-  onOffMountedSwitch,
-  onOffOutlet,
-  onOffSwitch,
-  PlatformConfig,
-  PlatformMatterbridge,
+  mountedOnOffControl,
+  onOffLightSwitch,
+  onOffPlugInUnit,
+  type PlatformConfig,
+  type PlatformMatterbridge,
 } from 'matterbridge';
-import { AnsiLogger } from 'matterbridge/logger';
-import { AtLeastOne } from 'matterbridge/matter';
+import type { AnsiLogger } from 'matterbridge/logger';
+import type { AtLeastOne } from 'matterbridge/matter';
 import { BooleanState, DoorLock, OnOff } from 'matterbridge/matter/clusters';
-
-// TODO: Remove when require Matterbridge 3.8.1 or later
-/* eslint-disable @typescript-eslint/no-deprecated */
 
 export const MODE_AWAY = 'Mode Away';
 export const MODE_HOME = 'Mode Home';
@@ -89,20 +86,21 @@ export class Platform extends MatterbridgeDynamicPlatform {
     super(matterbridge, log, config);
 
     // Verify that Matterbridge is the correct version
-    if (typeof this.verifyMatterbridgeVersion !== 'function' || !this.verifyMatterbridgeVersion('3.8.0')) {
-      throw new Error(`This plugin requires Matterbridge version >= "3.8.0". Please update Matterbridge to the latest version in the frontend.`);
+    if (typeof this.verifyMatterbridgeVersion !== 'function' || !this.verifyMatterbridgeVersion('3.9.0')) {
+      throw new Error(`This plugin requires Matterbridge version >= "3.9.0". Please update Matterbridge to the latest version in the frontend.`);
     }
 
     this.log.info('Initializing platform:', this.config.name);
 
     // Set default values for config options if they are not set in old versions of the config
-    // istanbul ignore next cause is just to prevent errors in case the config is missing some options, it should never happen but it's better to be safe
+    // v8 ignore start -- defaults for missing options in old configs, never hit in tests
     {
       config.securityRoom = config.securityRoom ?? 'Security';
       config.alertTimeout = config.alertTimeout ?? 60;
       config.useSetters = config.useSetters ?? true;
       config.useSwitch = config.useSwitch ?? false;
     }
+    // v8 ignore stop
 
     this.log.info('Finished initializing platform:', this.config.name);
   }
@@ -112,11 +110,13 @@ export class Platform extends MatterbridgeDynamicPlatform {
 
     // Make sure the platform is ready before registering devices
     await this.ready;
-    const triggerSetterDeviceTypes: AtLeastOne<DeviceTypeDefinition> = this.config.useSwitch ? [onOffSwitch, bridgedNode] : [onOffMountedSwitch, onOffOutlet, bridgedNode];
+    const triggerSetterDeviceTypes: AtLeastOne<DeviceTypeDefinition> = this.config.useSwitch
+      ? [onOffLightSwitch, bridgedNode]
+      : [mountedOnOffControl, onOffPlugInUnit, bridgedNode];
 
     // Create devices for modes
     for (const mode of modes) {
-      const doorLock = new MatterbridgeEndpoint([doorLockDevice, bridgedNode], { id: `${this.getId(mode)}` })
+      const doorLockDevice = new MatterbridgeEndpoint([doorLock, bridgedNode], { id: this.getId(mode) })
         .createDefaultBridgedDeviceBasicInformationClusterServer(this.getName(mode), this.getSerial(mode), undefined, 'Matterbridge', 'Matterbridge Security Plugin')
         .createDefaultDoorLockClusterServer()
         .addRequiredClusters()
@@ -130,7 +130,8 @@ export class Platform extends MatterbridgeDynamicPlatform {
               lockOperationType: DoorLock.LockOperationType.Lock,
               operationSource: DoorLock.OperationSource.Remote,
               userIndex: null,
-              fabricIndex: context?.fabric ?? /* istanbul ignore next */ null,
+              // v8 ignore next
+              fabricIndex: context?.fabric ?? null,
               sourceNode: null,
               credentials: null,
             },
@@ -148,14 +149,15 @@ export class Platform extends MatterbridgeDynamicPlatform {
               lockOperationType: DoorLock.LockOperationType.Unlock,
               operationSource: DoorLock.OperationSource.Remote,
               userIndex: null,
-              fabricIndex: context?.fabric ?? /* istanbul ignore next */ null,
+              // v8 ignore next
+              fabricIndex: context?.fabric ?? null,
               sourceNode: null,
               credentials: null,
             },
             this.log,
           );
           setTimeout(() => {
-            void (async () => {
+            void (async (): Promise<void> => {
               this.log.debug(`Resetting mode to off after unlock command for mode: ${mode}`);
               await this.setModeOff();
             })();
@@ -164,8 +166,8 @@ export class Platform extends MatterbridgeDynamicPlatform {
         .addCommandHandler('DoorLock.unlockWithTimeout', () => {
           this.log.info(`Received unlockWithTimeout command for mode: ${mode}`);
         });
-      await this.registerDevice(doorLock);
-      await doorLock.setAttribute(DoorLock, 'lockState', DoorLock.LockState.Unlocked, this.log);
+      await this.registerDevice(doorLockDevice);
+      await doorLockDevice.setAttribute(DoorLock, 'lockState', DoorLock.LockState.Unlocked, this.log);
     }
     const lastSecurityMode: Modes = (await this.context?.get('LastSecurityMode', MODE_OFF)) ?? MODE_OFF;
     this.currentMode = lastSecurityMode;
@@ -174,25 +176,25 @@ export class Platform extends MatterbridgeDynamicPlatform {
     await this.syncronizeModes(lastSecurityMode);
 
     // Create devices for setters
-    // istanbul ignore else
+    // v8 ignore else
     if (this.config.useSetters) {
       for (const setter of setters) {
-        const setterDevice = new MatterbridgeEndpoint(triggerSetterDeviceTypes, { id: `${this.getId(setter)}` })
+        const setterDevice = new MatterbridgeEndpoint(triggerSetterDeviceTypes, { id: this.getId(setter) })
           .createDefaultBridgedDeviceBasicInformationClusterServer(this.getName(setter), this.getSerial(setter), undefined, 'Matterbridge', 'Matterbridge Security Plugin')
           // Extraneous server cluster for Apple Home app to recognize the device as a switch and not a plug.
-          // The on/off cluster server will be removed from required clusters of onOffSwitch in a future release.
+          // The on/off cluster server will be removed from required clusters of onOffLightSwitch in a future release.
           .createDefaultOnOffClusterServer()
           .addRequiredClusters()
           .addCommandHandler('OnOff.on', async () => {
             this.log.info(`Received on command for setter: ${setter}`);
             // Restore the setter state after a short timeout
             setTimeout(() => {
-              void (async () => {
+              void (async (): Promise<void> => {
                 this.log.debug(`Resetting setter state to off after on command for setter: ${setter}`);
                 await setterDevice.setAttribute(OnOff, 'onOff', false);
               })();
             }, this.shortTimeout).unref();
-            // istanbul ignore else
+            // v8 ignore else
             if (setter === SET_AWAY) {
               await this.getDeviceById(this.getId(MODE_AWAY))?.setAttribute(DoorLock, 'lockState', DoorLock.LockState.Locked, this.log);
               await this.syncronizeModes(MODE_AWAY);
@@ -214,17 +216,16 @@ export class Platform extends MatterbridgeDynamicPlatform {
 
     // Create devices for triggers
     for (const trigger of triggers) {
-      const triggerDevice = new MatterbridgeEndpoint(triggerSetterDeviceTypes, { id: `${this.getId(trigger)}` })
+      const triggerDevice = new MatterbridgeEndpoint(triggerSetterDeviceTypes, { id: this.getId(trigger) })
         .createDefaultBridgedDeviceBasicInformationClusterServer(this.getName(trigger), this.getSerial(trigger), undefined, 'Matterbridge', 'Matterbridge Security Plugin')
         // Extraneous server cluster for Apple Home app to recognize the device as a switch and not a plug.
-        // The on/off cluster server will be removed from required clusters of onOffSwitch in a future release.
         .createDefaultOnOffClusterServer()
         .addRequiredClusters()
         .addCommandHandler('OnOff.on', async () => {
           this.log.info(`Received on command for trigger: ${trigger}`);
           // Restore the trigger state after a short timeout
           setTimeout(() => {
-            void (async () => {
+            void (async (): Promise<void> => {
               this.log.debug(`Resetting trigger state to off after on command for trigger: ${trigger}`);
               await triggerDevice.setAttribute(OnOff, 'onOff', false);
             })();
@@ -239,10 +240,10 @@ export class Platform extends MatterbridgeDynamicPlatform {
           await this.getDeviceById(this.getId(ALERT_MASTER))?.triggerEvent(BooleanState, 'stateChange', { stateValue: false }, this.log);
           await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.setAttribute(BooleanState, 'stateValue', false, this.log);
           await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.triggerEvent(BooleanState, 'stateChange', { stateValue: false }, this.log);
-          // istanbul ignore else
+          // v8 ignore else
           if (this.config.alertTimeout > 0) {
             setTimeout(() => {
-              void (async () => {
+              void (async (): Promise<void> => {
                 await this.getDeviceById(this.getId(ALERT_MASTER))?.setAttribute(BooleanState, 'stateValue', true, this.log);
                 await this.getDeviceById(this.getId(ALERT_MASTER))?.triggerEvent(BooleanState, 'stateChange', { stateValue: true }, this.log);
                 await this.getDeviceById(this.getId(trigger.replace('Trigger', 'Alert')))?.setAttribute(BooleanState, 'stateValue', true, this.log);
@@ -257,7 +258,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
 
     // Create devices for alerts
     for (const alert of alerts) {
-      const alertDevice = new MatterbridgeEndpoint([contactSensor, bridgedNode], { id: `${this.getId(alert)}` })
+      const alertDevice = new MatterbridgeEndpoint([contactSensor, bridgedNode], { id: this.getId(alert) })
         .createDefaultBridgedDeviceBasicInformationClusterServer(this.getName(alert), this.getSerial(alert), undefined, 'Matterbridge', 'Matterbridge Security Plugin')
         .addRequiredClusters();
       await this.registerDevice(alertDevice);
@@ -273,7 +274,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
   override async onShutdown(reason?: string): Promise<void> {
     await super.onShutdown(reason);
     this.log.info('onShutdown called with reason:', reason ?? 'none');
-    if (this.config.unregisterOnShutdown === true) await this.unregisterAllDevices();
+    if (this.config.unregisterOnShutdown) await this.unregisterAllDevices();
   }
 
   getName(name: string): string {
@@ -313,7 +314,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
     if (mode === MODE_OFF) await this.resetAlerts();
     for (const m of modes) {
       const device = this.getDeviceById(this.getId(m));
-      // istanbul ignore next - This is to prevent errors in case the device is not found, it should never happen but it's better to be safe
+      // v8 ignore next -- device-not-found guard, never hit in tests
       if (!device) continue;
       if (device.id === this.getId(mode)) continue;
       await device.setAttribute(DoorLock, 'lockState', DoorLock.LockState.Unlocked, this.log);
