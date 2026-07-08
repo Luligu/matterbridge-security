@@ -1,3 +1,9 @@
+/**
+ * @file vitest/module.test.ts
+ * @description This file contains the tests for the Platform class.
+ * @author Luca Liguori
+ */
+
 const MATTER_PORT = 6000;
 const NAME = 'Platform';
 const MATTER_CREATE_ONLY = true;
