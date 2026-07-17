@@ -1,3 +1,9 @@
+/**
+ * @file vitest/module.test.ts
+ * @description This file contains the tests for the Platform class.
+ * @author Luca Liguori
+ */
+
 const MATTER_PORT = 6000;
 const NAME = 'Platform';
 const MATTER_CREATE_ONLY = true;
@@ -5,59 +11,63 @@ const MATTER_CREATE_ONLY = true;
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { jest } from '@jest/globals';
-import { internalFor } from 'matterbridge';
-import {
-  addMatterbridgePlatform,
-  createMatterbridgeEnvironment,
-  destroyMatterbridgeEnvironment,
-  log,
-  loggerInfoSpy,
-  matterbridge,
-  setupTest,
-  startMatterbridgeEnvironment,
-  stopMatterbridgeEnvironment,
-} from 'matterbridge/jestutils';
+import { internalFor, type PlatformMatterbridge } from 'matterbridge';
 import { DoorLock, OnOff } from 'matterbridge/matter/clusters';
 import { wait } from 'matterbridge/utils';
+import { log, loggerInfoSpy, setupTest } from 'matterbridge/vitest-utils';
+import {
+  addMatterbridge,
+  createServerNode,
+  createTestEnvironment,
+  destroyTestEnvironment,
+  flushServerNode,
+  getMatterbridge,
+  startServerNode,
+  stopServerNode,
+} from 'matterbridge/vitest-utils/matter';
 
-import initializePlugin, { MODE_NIGHT, MODE_OFF, MODE_VACATION, Modes, modes, Platform, SecurityPlatformConfig, setters, triggers } from './module.js';
+import initializePlugin, { MODE_NIGHT, MODE_OFF, MODE_VACATION, type Modes, modes, Platform, type SecurityPlatformConfig, setters, triggers } from '../src/module.js';
 
-setupTest(NAME);
+// Setup the test environment
+await setupTest(NAME, false);
 
 describe('TestPlatform', () => {
+  let matterbridge: PlatformMatterbridge;
   let platform: Platform;
 
   const config = JSON.parse(readFileSync(path.join('.', 'matterbridge-security.config.json'), 'utf-8')) as SecurityPlatformConfig;
 
   beforeAll(async () => {
     // Create Matterbridge environment
-    await createMatterbridgeEnvironment();
-    await startMatterbridgeEnvironment(MATTER_PORT, MATTER_CREATE_ONLY);
+    await createTestEnvironment();
+    await createServerNode(MATTER_PORT);
+    if (!MATTER_CREATE_ONLY) await startServerNode();
+    matterbridge = getMatterbridge();
   });
 
   beforeEach(() => {
     // Reset the mock calls before each test
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
-  afterEach(async () => {
+  afterEach(() => {
     // Cleanup after each test
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   afterAll(async () => {
     // Destroy Matterbridge environment
-    await stopMatterbridgeEnvironment(MATTER_CREATE_ONLY);
-    await destroyMatterbridgeEnvironment(undefined, undefined, !MATTER_CREATE_ONLY);
+    if (MATTER_CREATE_ONLY) await flushServerNode();
+    else await stopServerNode();
+    await destroyTestEnvironment();
 
     // Restore all mocks
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should return an instance of TestPlatform', async () => {
     platform = initializePlugin(matterbridge, log, config);
-    addMatterbridgePlatform(platform);
+    addMatterbridge(platform);
     expect(platform).toBeInstanceOf(Platform);
     expect(loggerInfoSpy).toHaveBeenCalledWith('Initializing platform:', config.name);
     expect(loggerInfoSpy).toHaveBeenCalledWith('Finished initializing platform:', config.name);
@@ -65,14 +75,14 @@ describe('TestPlatform', () => {
   });
 
   it('should throw error in load when version is not valid', () => {
-    expect(() => new Platform({ ...matterbridge, matterbridgeVersion: '1.5.0' }, log, config)).toThrow(
-      'This plugin requires Matterbridge version >= "3.8.0". Please update Matterbridge to the latest version in the frontend.',
+    expect(() => new Platform({ ...matterbridge, matterbridgeVersion: '3.8.0' }, log, config)).toThrow(
+      'This plugin requires Matterbridge version >= "3.9.0". Please update Matterbridge to the latest version in the frontend.',
     );
   });
 
   it('should initialize platform with config name', () => {
     platform = new Platform(matterbridge, log, config);
-    addMatterbridgePlatform(platform);
+    addMatterbridge(platform);
     expect(loggerInfoSpy).toHaveBeenCalledWith('Initializing platform:', config.name);
     expect(loggerInfoSpy).toHaveBeenCalledWith('Finished initializing platform:', config.name);
   });
@@ -86,19 +96,19 @@ describe('TestPlatform', () => {
       const device = platform.getDeviceById(platform.getId(mode));
       expect(device).toBeDefined();
       if (!device) continue;
-      const internal = await internalFor(device, DoorLock.Complete);
+      const internal = await internalFor(device, DoorLock);
       expect(internal).toBeDefined();
       if (internal) internal.enableTimeout = false;
-      await device?.invokeBehaviorCommand(DoorLock.Complete, 'lockDoor', {});
-      await device?.invokeBehaviorCommand(DoorLock.Complete, 'unlockDoor', {});
-      await device?.invokeBehaviorCommand(DoorLock.Complete, 'unlockWithTimeout', { timeout: 1 });
+      await device?.invokeBehaviorCommand(DoorLock, 'lockDoor', {});
+      await device?.invokeBehaviorCommand(DoorLock, 'unlockDoor', {});
+      await device?.invokeBehaviorCommand(DoorLock, 'unlockWithTimeout', { timeout: 1 });
     }
 
     // Test setters
     for (const setter of setters) {
       const device = platform.getDeviceById(platform.getId(setter));
       expect(device).toBeDefined();
-      await device?.invokeBehaviorCommand(OnOff.Complete, 'on');
+      await device?.invokeBehaviorCommand(OnOff, 'on');
       await wait(100);
     }
 
@@ -108,13 +118,13 @@ describe('TestPlatform', () => {
       const device = platform.getDeviceById(platform.getId(trigger));
       expect(device).toBeDefined();
       platform.currentMode = MODE_OFF;
-      await device?.invokeBehaviorCommand(OnOff.Complete, 'on');
+      await device?.invokeBehaviorCommand(OnOff, 'on');
       await wait(100);
       platform.currentMode = MODE_VACATION;
-      await device?.invokeBehaviorCommand(OnOff.Complete, 'on');
+      await device?.invokeBehaviorCommand(OnOff, 'on');
       await wait(100);
       platform.currentMode = MODE_NIGHT;
-      await device?.invokeBehaviorCommand(OnOff.Complete, 'on');
+      await device?.invokeBehaviorCommand(OnOff, 'on');
       await wait(100);
     }
     platform.config.unregisterOnShutdown = true;
