@@ -300,14 +300,32 @@ export class Platform extends MatterbridgeDynamicPlatform {
     if (this.config.unregisterOnShutdown) await this.unregisterAllDevices();
   }
 
+  /**
+   * Build the display name for a security device.
+   *
+   * @param {string} name Device role name.
+   * @returns {string} Display name prefixed with the configured security room.
+   */
   getName(name: string): string {
     return this.config.securityRoom + ' ' + name;
   }
 
+  /**
+   * Build the stable Matterbridge endpoint id for a security device.
+   *
+   * @param {string} name Device role name.
+   * @returns {string} Endpoint id prefixed with the configured security room and stripped of spaces.
+   */
   getId(name: string): string {
     return this.config.securityRoom + name.replaceAll(' ', '');
   }
 
+  /**
+   * Build the stable serial number for a security device.
+   *
+   * @param {string} name Device role name.
+   * @returns {string} Lowercase serial number prefixed with security and using dashes for spaces.
+   */
   getSerial(name: string): string {
     return 'security-' + name.toLowerCase().replaceAll(' ', '-');
   }
