@@ -28,7 +28,7 @@ If you like this project and find it useful, please consider giving it a star on
 
 <a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="120"></a>
 
-## [1.2.1] - Dev branch
+## [1.2.1] - 2026-08-30
 
 ### Breaking changes
 
@@ -42,11 +42,24 @@ If you like this project and find it useful, please consider giving it a star on
 
 ### Changed
 
+- [package]: Bump `node-ansi-logger` to v.3.3.1.
+- [package]: Bump `node-persist-manager` to v.2.1.1.
 - [package]: Bump `oxfmt` to v.0.65.0.
 - [package]: Bump `oxlint` to v.1.80.0.
 - [package]: Bump `oxlint-tsgolint` to v.7.0.2001.
 - [package]: Bump `vitest` to v.4.1.11.
 - [package]: Bump `@types/node` to v.26.4.0.
+- [frontend]: Bump `@mui/icons-material` to v.9.4.0.
+- [frontend]: Bump `@mui/material` to v.9.4.0.
+- [frontend]: Bump `react` to v.19.2.8.
+- [frontend]: Bump `react-dom` to v.19.2.8.
+- [frontend]: Bump `@types/react` to v.19.2.18.
+- [frontend]: Bump `@types/react-dom` to v.19.2.5.
+- [frontend]: Bump `@vitejs/plugin-react` to v.6.1.1.
+- [frontend]: Bump `oxfmt` to v.0.65.0.
+- [frontend]: Bump `oxlint` to v.1.80.0.
+- [frontend]: Bump `oxlint-tsgolint` to v.7.0.2001.
+- [frontend]: Bump `vite` to v.8.2.2.
 - [package]: Update agents configs.
 - [vscode]: Bump `settings` to v.1.0.10.
 
