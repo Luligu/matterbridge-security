@@ -34,6 +34,7 @@ await setupTest(NAME, false);
 describe('TestPlatform', () => {
   let matterbridge: PlatformMatterbridge;
   let platform: Platform;
+  const pause = process.env.GITHUB_ACTIONS === 'true' ? 250 : 100;
 
   const config = JSON.parse(readFileSync(path.join('.', 'matterbridge-security.config.json'), 'utf-8')) as SecurityPlatformConfig;
 
@@ -76,7 +77,7 @@ describe('TestPlatform', () => {
 
   it('should throw error in load when version is not valid', () => {
     expect(() => new Platform({ ...matterbridge, matterbridgeVersion: '3.8.0' }, log, config)).toThrow(
-      'This plugin requires Matterbridge version >= "3.9.0". Please update Matterbridge to the latest version in the frontend.',
+      'This plugin requires Matterbridge version >= "3.10.0". Please update Matterbridge to the latest version in the frontend.',
     );
   });
 
@@ -92,6 +93,8 @@ describe('TestPlatform', () => {
     platform.shortTimeout = 10;
     platform.config.alertTimeout = 0.001;
     expect(loggerInfoSpy).toHaveBeenCalledWith('onStart called with reason:', 'Test reason');
+
+    // Test modes
     for (const mode of modes) {
       const device = platform.getDeviceById(platform.getId(mode));
       expect(device).toBeDefined();
@@ -100,8 +103,11 @@ describe('TestPlatform', () => {
       expect(internal).toBeDefined();
       if (internal) internal.enableTimeout = false;
       await device?.invokeBehaviorCommand(DoorLock, 'lockDoor', {});
+      await wait(pause);
       await device?.invokeBehaviorCommand(DoorLock, 'unlockDoor', {});
+      await wait(pause);
       await device?.invokeBehaviorCommand(DoorLock, 'unlockWithTimeout', { timeout: 1 });
+      await wait(pause);
     }
 
     // Test setters
@@ -109,7 +115,7 @@ describe('TestPlatform', () => {
       const device = platform.getDeviceById(platform.getId(setter));
       expect(device).toBeDefined();
       await device?.invokeBehaviorCommand(OnOff, 'on');
-      await wait(100);
+      await wait(pause);
     }
 
     // Test triggers
@@ -119,13 +125,13 @@ describe('TestPlatform', () => {
       expect(device).toBeDefined();
       platform.currentMode = MODE_OFF;
       await device?.invokeBehaviorCommand(OnOff, 'on');
-      await wait(100);
+      await wait(pause);
       platform.currentMode = MODE_VACATION;
       await device?.invokeBehaviorCommand(OnOff, 'on');
-      await wait(100);
+      await wait(pause);
       platform.currentMode = MODE_NIGHT;
       await device?.invokeBehaviorCommand(OnOff, 'on');
-      await wait(100);
+      await wait(pause);
     }
     platform.config.unregisterOnShutdown = true;
     await platform.onShutdown('Test reason');
