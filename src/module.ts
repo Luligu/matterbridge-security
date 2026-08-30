@@ -317,7 +317,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
    * @returns {string} Endpoint id prefixed with the configured security room and stripped of spaces.
    */
   getId(name: string): string {
-    return this.config.securityRoom + name.replaceAll(' ', '');
+    return (this.config.securityRoom + name).replaceAll(' ', '');
   }
 
   /**

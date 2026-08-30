@@ -3,7 +3,7 @@ import { createTheme, type Theme } from '@mui/material/styles';
 export type ThemeMode = 'light' | 'dark';
 
 /**
- * Creates the MUI theme for the matterbridge-mqtt frontend.
+ * Creates the MUI theme for the matterbridge-security frontend.
  *
  * @param {ThemeMode} mode - The palette mode (`light` or `dark`).
  * @returns {Theme} The MUI theme for the given mode.
