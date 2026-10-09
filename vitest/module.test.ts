@@ -13,8 +13,6 @@ import path from 'node:path';
 
 import { internalFor, type PlatformMatterbridge } from 'matterbridge';
 import { DoorLock, OnOff } from 'matterbridge/matter/clusters';
-import { wait } from 'matterbridge/utils';
-import { log, loggerInfoSpy, setupTest } from 'matterbridge/vitest-utils';
 import {
   addMatterbridge,
   createServerNode,
@@ -22,9 +20,13 @@ import {
   destroyTestEnvironment,
   flushServerNode,
   getMatterbridge,
+  log,
+  loggerInfoSpy,
+  setupTest,
   startServerNode,
   stopServerNode,
-} from 'matterbridge/vitest-utils/matter';
+} from 'matterbridge/test-utils/vitest';
+import { wait } from 'matterbridge/utils';
 
 import initializePlugin, { MODE_NIGHT, MODE_OFF, MODE_VACATION, type Modes, modes, Platform, type SecurityPlatformConfig, setters, triggers } from '../src/module.js';
 
