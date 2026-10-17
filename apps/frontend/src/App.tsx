@@ -5,6 +5,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import { useCallback, useMemo, useState } from 'react';
 
 import matterbridgeLogo from './assets/matterbridge.svg';
+import EventHistory from './EventHistory.tsx';
 import { createAppTheme, type ThemeMode } from './theme.ts';
 
 const THEME_MODE_KEY = 'themeMode';
@@ -68,6 +69,7 @@ export default function App() {
       <CssBaseline />
       <Container maxWidth="lg" sx={{ pb: 4 }}>
         <Header mode={mode} onToggleMode={toggleMode} />
+        <EventHistory />
       </Container>
     </ThemeProvider>
   );

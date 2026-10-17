@@ -76,6 +76,20 @@ describe('SecurityHistory', () => {
     expect(await context.get('SecurityEvents')).toEqual(history.events);
   });
 
+  it.each([10, 1000])('should apply the configured limit of %s to restored and new events', async (limit) => {
+    const events: SecurityEvent[] = Array.from({ length: limit + 1 }, () => ({ datetime, event: 'Trigger Away', type: 'trigger' }));
+    await context.set('SecurityEvents', events);
+    await history.load(context, limit);
+    expect(history.events).toEqual(events.slice(-limit));
+    await history.add(context, { event: 'Shutdown', type: 'shutdown' });
+    expect(history.events).toEqual([...events.slice(-(limit - 1)), { datetime, event: 'Shutdown', type: 'shutdown' }]);
+    expect(await context.get('SecurityEvents')).toEqual(history.events);
+  });
+
+  it.each([0, -1, 9, 1001, 10.5, Number.NaN, Infinity])('should reject invalid event limit %s', async (limit) => {
+    await expect(history.load(context, limit)).rejects.toThrow('eventsNumber must be an integer between 10 and 1000.');
+  });
+
   it('should serialize concurrent writes while an earlier write is pending', async () => {
     let release!: () => void;
     const gate = new Promise<void>((resolve) => {

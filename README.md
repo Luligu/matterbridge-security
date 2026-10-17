@@ -28,7 +28,8 @@ This plugin allows you to create a security system.
 - Five preconfigured setters: Home, Away, Night, Vacation, Off.
 - Four preconfigured triggers: Home, Away, Night, 24h.
 - Five preconfigured alerts: Home, Away, Night, 24h, Master.
-- Persistent history of the latest 100 mode changes, accepted triggers, startups and shutdowns, with timestamps.
+- Persistent history of mode changes, accepted triggers, startups and shutdowns, with timestamps and a configurable event limit (default: 100).
+- Color-coded frontend event table with local date and time display.
 
 The plugin requires matterbridge v.3.10.10.
 
@@ -89,7 +90,11 @@ Alerts are the alarm states exposed by the plugin; they stay active for the conf
 
 ### Event history
 
-The platform's `events` array contains the latest 100 security events, oldest first. History is saved in plugin storage under `SecurityEvents` and restored on startup.
+The platform's `events` array contains the latest security events, oldest first. Set `eventsNumber` in the plugin configuration to an integer from 10 to 1000 to control how many events are retained (default: 100). Existing configurations without this option default to 100 on startup. History is saved in plugin storage under `SecurityEvents` and restored on startup.
+
+The plugin frontend displays all retained events, oldest first, with color-coded event types and dates formatted for your browser's locale and timezone. Use **Refresh** to load the latest events. Timestamps remain in ISO format in storage and in the plugin's `GET /plugins/matterbridge-security/api/events` response.
+
+Trigger events are displayed as **Alarm** in the frontend (for example, **Alarm Away**). Stored events and the API retain the `trigger` type and original trigger names.
 
 Each entry contains `datetime` (an ISO 8601 UTC timestamp), `event` (the mode or trigger name, `Startup`, or `Shutdown`), and `type` (`mode`, `trigger`, `startup`, or `shutdown`).
 

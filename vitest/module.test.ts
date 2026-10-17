@@ -99,8 +99,11 @@ describe('TestPlatform', () => {
   });
 
   it('should initialize platform with config name', () => {
-    platform = new Platform(matterbridge, log, config);
+    const legacyConfig = { ...config };
+    Reflect.deleteProperty(legacyConfig, 'eventsNumber');
+    platform = new Platform(matterbridge, log, legacyConfig);
     addMatterbridge(platform);
+    expect(platform.config.eventsNumber).toBe(100);
     expect(loggerInfoSpy).toHaveBeenCalledWith('Initializing platform:', config.name);
     expect(loggerInfoSpy).toHaveBeenCalledWith('Finished initializing platform:', config.name);
   });
@@ -201,6 +204,18 @@ describe('TestPlatform', () => {
       await historyPlatform.onShutdown();
     });
 
+    it('should return all events from the plugin history API', async () => {
+      await historyPlatform.syncronizeModes(MODE_AWAY);
+      expect(await historyPlatform.onFetch('GET', 'events')).toEqual(historyPlatform.events);
+      expect(historyPlatform.events).toHaveLength(1);
+    });
+
+    it('should delegate unsupported API requests to the base platform', async () => {
+      expect(await historyPlatform.onFetch('POST', 'events')).toBeUndefined();
+      expect(await historyPlatform.onFetch('GET', 'unknown')).toBeUndefined();
+      expect(await historyPlatform.onFetch('GET')).toBeUndefined();
+    });
+
     it('should persist mode changes without recording repeated modes', async () => {
       const datetime = '2026-10-17T17:38:25.632Z';
       const now = vi.spyOn(Date.prototype, 'toISOString').mockReturnValue(datetime);
@@ -225,8 +240,20 @@ describe('TestPlatform', () => {
       await historyPlatform.context?.set('SecurityEvents', events);
       await historyPlatform.context?.set('LastSecurityMode', MODE_AWAY);
       await historyPlatform.onStart();
+      expect(historyPlatform.config.eventsNumber).toBe(100);
       expect(historyPlatform.currentMode).toBe(MODE_AWAY);
       expect(historyPlatform.events).toEqual([...events, { datetime: expect.any(String), event: 'Startup', type: 'startup' }]);
+      expect(await historyPlatform.context?.get('SecurityEvents')).toEqual(historyPlatform.events);
+    });
+
+    it('should use the configured number of events after startup', async () => {
+      historyPlatform.config.eventsNumber = 10;
+      await historyPlatform.onStart();
+      for (let index = 0; index < 5; index++) {
+        await historyPlatform.syncronizeModes(MODE_AWAY);
+        await historyPlatform.setModeOff();
+      }
+      expect(historyPlatform.events.map((event) => event.event)).toEqual(Array.from({ length: 10 }, (_, index) => (index % 2 === 0 ? MODE_AWAY : MODE_OFF)));
       expect(await historyPlatform.context?.get('SecurityEvents')).toEqual(historyPlatform.events);
     });
 

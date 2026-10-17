@@ -3,7 +3,7 @@
  * @description Persistent security event history.
  * @author Luca Liguori
  * @created 2026-10-17
- * @version 1.0.0
+ * @version 1.0.2
  * @license Apache-2.0
  *
  * Copyright 2026 Luca Liguori.
@@ -30,27 +30,31 @@ type SecurityEventData = { event: Modes; type: 'mode' } | { event: Triggers; typ
 export type SecurityEvent = { datetime: string } & SecurityEventData;
 
 /**
- * Store the latest 100 security events in chronological order.
+ * Store a configured number of security events in chronological order.
  */
 export class SecurityHistory {
   events: SecurityEvent[] = [];
   private eventWrite: Promise<void> = Promise.resolve();
+  private eventsNumber = 100;
 
   /**
    * Restore security history during startup.
    *
    * @param {NodeStorage | undefined} context Plugin storage.
+   * @param {number} [eventsNumber] Maximum number of events to retain, from 10 to 1000, defaulting to 100.
    * @returns {Promise<NodeStorage>} Plugin storage after history has been loaded.
-   * @throws {Error} If plugin storage is unavailable or history cannot be read.
+   * @throws {Error} If plugin storage is unavailable, the limit is invalid or history cannot be read.
    */
-  async load(context: NodeStorage | undefined): Promise<NodeStorage> {
+  async load(context: NodeStorage | undefined, eventsNumber = 100): Promise<NodeStorage> {
     if (!context) throw new Error('Plugin storage is not available for security event history.');
-    this.events = (await context.get<SecurityEvent[]>('SecurityEvents', [])).slice(-100);
+    if (!Number.isInteger(eventsNumber) || eventsNumber < 10 || eventsNumber > 1000) throw new Error('eventsNumber must be an integer between 10 and 1000.');
+    this.eventsNumber = eventsNumber;
+    this.events = (await context.get<SecurityEvent[]>('SecurityEvents', [])).slice(-this.eventsNumber);
     return context;
   }
 
   /**
-   * Timestamp an event and persist the latest 100 events in chronological order.
+   * Timestamp an event and persist history up to the configured limit.
    *
    * @param {NodeStorage | undefined} context Plugin storage.
    * @param {SecurityEventData} event Mode change, accepted trigger or lifecycle event to record.
@@ -59,7 +63,7 @@ export class SecurityHistory {
    */
   async add(context: NodeStorage | undefined, event: SecurityEventData): Promise<void> {
     if (!context) throw new Error('Plugin storage is not available for security event history.');
-    this.events = [...this.events, { datetime: new Date().toISOString(), ...event }].slice(-100);
+    this.events = [...this.events, { datetime: new Date().toISOString(), ...event }].slice(-this.eventsNumber);
     const events = this.events;
     const save = async (): Promise<void> => {
       await context.set('SecurityEvents', events);

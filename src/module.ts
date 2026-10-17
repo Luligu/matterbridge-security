@@ -82,6 +82,7 @@ export type Alerts = typeof ALERT_AWAY | typeof ALERT_HOME | typeof ALERT_NIGHT 
 export type SecurityPlatformConfig = PlatformConfig & {
   securityRoom: string;
   alertTimeout: number;
+  eventsNumber: number;
   useSetters: boolean;
   useSwitch: boolean;
 };
@@ -107,7 +108,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
   /**
    * Get the latest security events in chronological order.
    *
-   * @returns {SecurityEvent[]} The latest 100 persisted security events.
+   * @returns {SecurityEvent[]} The retained security events.
    */
   get events(): SecurityEvent[] {
     return this.history.events;
@@ -132,6 +133,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
     {
       config.securityRoom = config.securityRoom ?? 'Security';
       config.alertTimeout = config.alertTimeout ?? 60;
+      config.eventsNumber ??= 100;
       config.useSetters = config.useSetters ?? true;
       config.useSwitch = config.useSwitch ?? false;
     }
@@ -145,7 +147,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
 
     // Make sure the platform is ready before registering devices
     await this.ready;
-    const context = await this.history.load(this.context);
+    const context = await this.history.load(this.context, this.config.eventsNumber);
     const triggerSetterDeviceTypes: AtLeastOne<DeviceTypeDefinition> = this.config.useSwitch
       ? [onOffLightSwitch, bridgedNode]
       : [mountedOnOffControl, onOffPlugInUnit, bridgedNode];
@@ -307,6 +309,18 @@ export class Platform extends MatterbridgeDynamicPlatform {
   override async onConfigure(): Promise<void> {
     await super.onConfigure();
     this.log.info('onConfigure called');
+  }
+
+  /**
+   * Serve the event history through the plugin API.
+   *
+   * @param {string} method HTTP request method.
+   * @param {string} [path] Plugin API route.
+   * @returns {Promise<unknown>} Stored events or the base platform response for other routes.
+   */
+  override async onFetch(method: string, path?: string): Promise<unknown> {
+    if (method === 'GET' && path === 'events') return this.events;
+    return super.onFetch(method, path);
   }
 
   override async onShutdown(reason?: string): Promise<void> {

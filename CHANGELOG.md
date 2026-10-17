@@ -36,6 +36,8 @@ If you like this project and find it useful, please consider giving it a star on
 
 ### Added
 
+- [config]: Add `eventsNumber` to configure event history retention from 10 to 1000 events, defaulting to 100 for new and existing configurations.
+- [frontend]: Add a color-coded event history table in oldest-first order with localized dates, refresh and a plugin events API.
 - [security]: Persist the latest 100 mode changes, accepted triggers, startups and shutdowns with timestamps in an event history array.
 - [devcontainer]: Add [`Dev Container`](.devcontainer/README.md) v.2.2.0 with dual Node and Bun runtime support.
 - [agents]: Add a [`shared setup`](.agents/README.md) for all agents: OpenAI Codex, Claude Code, GitHub Copilot and Google Gemini / Antigravity.
