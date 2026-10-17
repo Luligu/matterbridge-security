@@ -28,7 +28,21 @@ import {
 } from 'matterbridge/test-utils/vitest';
 import { wait } from 'matterbridge/utils';
 
-import initializePlugin, { MODE_NIGHT, MODE_OFF, MODE_VACATION, type Modes, modes, Platform, type SecurityPlatformConfig, setters, triggers } from '../src/module.js';
+import type { SecurityEvent } from '../src/history.js';
+import initializePlugin, {
+  MODE_AWAY,
+  MODE_NIGHT,
+  MODE_OFF,
+  MODE_VACATION,
+  type Modes,
+  modes,
+  Platform,
+  type SecurityPlatformConfig,
+  setters,
+  TRIGGER_AWAY,
+  TRIGGER_HOME,
+  triggers,
+} from '../src/module.js';
 
 // Setup the test environment
 await setupTest(NAME, false);
@@ -74,6 +88,7 @@ describe('TestPlatform', () => {
     expect(platform).toBeInstanceOf(Platform);
     expect(loggerInfoSpy).toHaveBeenCalledWith('Initializing platform:', config.name);
     expect(loggerInfoSpy).toHaveBeenCalledWith('Finished initializing platform:', config.name);
+    await platform.ready;
     await platform.onShutdown();
   });
 
@@ -144,6 +159,8 @@ describe('TestPlatform', () => {
   });
 
   it('should call onStart without reason', async () => {
+    platform = new Platform(matterbridge, log, { ...config });
+    addMatterbridge(platform);
     platform.config.useSwitch = true;
     await platform.onStart();
     expect(loggerInfoSpy).toHaveBeenCalledWith('onStart called with reason:', 'none');
@@ -155,13 +172,117 @@ describe('TestPlatform', () => {
   });
 
   it('should call onShutdown with reason', async () => {
+    platform.config.unregisterOnShutdown = true;
     await platform.onShutdown('Test reason');
     expect(loggerInfoSpy).toHaveBeenCalledWith('onShutdown called with reason:', 'Test reason');
   });
 
   it('should call onShutdown without reason', async () => {
+    platform = new Platform(matterbridge, log, { ...config });
+    addMatterbridge(platform);
     platform.config.unregisterOnShutdown = true;
+    await platform.ready;
     await platform.onShutdown();
     expect(loggerInfoSpy).toHaveBeenCalledWith('onShutdown called with reason:', 'none');
+  });
+
+  describe('Platform event recording', () => {
+    let historyPlatform: Platform;
+
+    beforeEach(async () => {
+      historyPlatform = new Platform(matterbridge, log, { ...config, unregisterOnShutdown: true });
+      addMatterbridge(historyPlatform);
+      await historyPlatform.ready;
+      await historyPlatform.context?.set('SecurityEvents', []);
+      await historyPlatform.context?.set('LastSecurityMode', MODE_OFF);
+    });
+
+    afterEach(async () => {
+      await historyPlatform.onShutdown();
+    });
+
+    it('should persist mode changes without recording repeated modes', async () => {
+      const datetime = '2026-10-17T17:38:25.632Z';
+      const now = vi.spyOn(Date.prototype, 'toISOString').mockReturnValue(datetime);
+      try {
+        await historyPlatform.syncronizeModes(MODE_AWAY);
+        await historyPlatform.syncronizeModes(MODE_AWAY);
+        await historyPlatform.setModeOff();
+        await historyPlatform.setModeOff();
+        expect(historyPlatform.events).toEqual([
+          { datetime, event: MODE_AWAY, type: 'mode' },
+          { datetime, event: MODE_OFF, type: 'mode' },
+        ]);
+        expect(await historyPlatform.context?.get('SecurityEvents')).toEqual(historyPlatform.events);
+        expect(await historyPlatform.context?.get('LastSecurityMode')).toBe(MODE_OFF);
+      } finally {
+        now.mockRestore();
+      }
+    });
+
+    it('should restore history and mode and append a startup event without a duplicate mode event', async () => {
+      const events: SecurityEvent[] = [{ datetime: '2026-10-17T17:38:25.632Z', event: MODE_AWAY, type: 'mode' }];
+      await historyPlatform.context?.set('SecurityEvents', events);
+      await historyPlatform.context?.set('LastSecurityMode', MODE_AWAY);
+      await historyPlatform.onStart();
+      expect(historyPlatform.currentMode).toBe(MODE_AWAY);
+      expect(historyPlatform.events).toEqual([...events, { datetime: expect.any(String), event: 'Startup', type: 'startup' }]);
+      expect(await historyPlatform.context?.get('SecurityEvents')).toEqual(historyPlatform.events);
+    });
+
+    it('should record only triggers that activate alerts', async () => {
+      await historyPlatform.onStart();
+      historyPlatform.config.alertTimeout = 0;
+      historyPlatform.shortTimeout = 1;
+      const away = historyPlatform.getDeviceById(historyPlatform.getId(TRIGGER_AWAY));
+      const home = historyPlatform.getDeviceById(historyPlatform.getId(TRIGGER_HOME));
+      expect(away).toBeDefined();
+      expect(home).toBeDefined();
+      await away?.invokeBehaviorCommand(OnOff, 'on');
+      expect(historyPlatform.events.map((event) => event.type)).toEqual(['startup']);
+      await historyPlatform.syncronizeModes(MODE_VACATION);
+      await home?.invokeBehaviorCommand(OnOff, 'on');
+      expect(historyPlatform.events).toHaveLength(2);
+      await away?.invokeBehaviorCommand(OnOff, 'on');
+      expect(historyPlatform.events).toHaveLength(3);
+      expect(historyPlatform.events[2]).toEqual({
+        datetime: expect.any(String),
+        event: TRIGGER_AWAY,
+        type: 'trigger',
+      });
+      expect(await historyPlatform.context?.get('SecurityEvents')).toEqual(historyPlatform.events);
+      await wait(pause);
+    });
+
+    it('should persist shutdown after pending events and restore it on the next startup', async () => {
+      await historyPlatform.onStart();
+      const pending = historyPlatform.syncronizeModes(MODE_AWAY);
+      await historyPlatform.onShutdown();
+      await pending;
+      expect(historyPlatform.events.map((event) => event.type)).toEqual(['startup', 'mode', 'shutdown']);
+      const previousEvents = [...historyPlatform.events];
+      historyPlatform = new Platform(matterbridge, log, { ...config, unregisterOnShutdown: true });
+      addMatterbridge(historyPlatform);
+      await historyPlatform.onStart();
+      expect(historyPlatform.events).toEqual([...previousEvents, { datetime: expect.any(String), event: 'Startup', type: 'startup' }]);
+      expect(await historyPlatform.context?.get('SecurityEvents')).toEqual(historyPlatform.events);
+    });
+
+    it('should preserve restored history without reloading it during shutdown', async () => {
+      const events: SecurityEvent[] = [{ datetime: '2026-10-17T17:38:25.632Z', event: MODE_AWAY, type: 'mode' }];
+      await historyPlatform.context?.set('SecurityEvents', events);
+      await historyPlatform.onStart();
+      const context = historyPlatform.context;
+      if (!context) throw new Error('Test platform storage is unavailable.');
+      const get = vi.spyOn(context, 'get');
+      await historyPlatform.onShutdown();
+      expect(get).not.toHaveBeenCalled();
+      const expected = [...events, { datetime: expect.any(String), event: 'Startup', type: 'startup' }, { datetime: expect.any(String), event: 'Shutdown', type: 'shutdown' }];
+      expect(historyPlatform.events).toEqual(expected);
+      historyPlatform = new Platform(matterbridge, log, { ...config, unregisterOnShutdown: true });
+      addMatterbridge(historyPlatform);
+      await historyPlatform.ready;
+      expect(await historyPlatform.context?.get('SecurityEvents')).toEqual(expected);
+    });
   });
 });

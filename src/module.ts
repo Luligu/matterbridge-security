@@ -3,7 +3,7 @@
  * @description This file contains the class Platform.
  * @author Luca Liguori
  * @created 2026-04-02
- * @version 1.2.0
+ * @version 1.2.2
  * @license Apache-2.0
  *
  * Copyright 2026, 2027, 2028 Luca Liguori.
@@ -37,6 +37,8 @@ import {
 import type { AnsiLogger } from 'matterbridge/logger';
 import type { AtLeastOne } from 'matterbridge/matter';
 import { BooleanState, DoorLock, OnOff } from 'matterbridge/matter/clusters';
+
+import { type SecurityEvent, SecurityHistory } from './history.js';
 
 export const MODE_AWAY = 'Mode Away';
 export const MODE_HOME = 'Mode Home';
@@ -100,6 +102,16 @@ export default function initializePlugin(matterbridge: PlatformMatterbridge, log
 export class Platform extends MatterbridgeDynamicPlatform {
   shortTimeout = 500;
   currentMode: Modes = MODE_OFF;
+  private readonly history = new SecurityHistory();
+
+  /**
+   * Get the latest security events in chronological order.
+   *
+   * @returns {SecurityEvent[]} The latest 100 persisted security events.
+   */
+  get events(): SecurityEvent[] {
+    return this.history.events;
+  }
 
   constructor(
     matterbridge: PlatformMatterbridge,
@@ -133,6 +145,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
 
     // Make sure the platform is ready before registering devices
     await this.ready;
+    const context = await this.history.load(this.context);
     const triggerSetterDeviceTypes: AtLeastOne<DeviceTypeDefinition> = this.config.useSwitch
       ? [onOffLightSwitch, bridgedNode]
       : [mountedOnOffControl, onOffPlugInUnit, bridgedNode];
@@ -192,7 +205,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
       await this.registerDevice(doorLockDevice);
       await doorLockDevice.setAttribute(DoorLock, 'lockState', DoorLock.LockState.Unlocked, this.log);
     }
-    const lastSecurityMode: Modes = (await this.context?.get('LastSecurityMode', MODE_OFF)) ?? MODE_OFF;
+    const lastSecurityMode = await context.get<Modes>('LastSecurityMode', MODE_OFF);
     this.currentMode = lastSecurityMode;
     this.log.notice(`Last security mode: ${lastSecurityMode}`);
     await this.getDeviceById(this.getId(lastSecurityMode))?.setAttribute(DoorLock, 'lockState', DoorLock.LockState.Locked, this.log);
@@ -258,6 +271,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
           else if (trigger === TRIGGER_HOME && this.currentMode !== MODE_HOME) return;
           else if (trigger === TRIGGER_NIGHT && this.currentMode !== MODE_NIGHT) return;
           else this.log.info(`Trigger ${trigger} activated for mode ${this.currentMode}, activating alerts...`);
+          await this.history.add(this.context, { event: trigger, type: 'trigger' });
           // Trigger the master alert and the alert device associated with the trigger and reset the trigger after the alert timeout
           await this.getDeviceById(this.getId(ALERT_MASTER))?.setAttribute(BooleanState, 'stateValue', false, this.log);
           await this.getDeviceById(this.getId(ALERT_MASTER))?.triggerEvent(BooleanState, 'stateChange', { stateValue: false }, this.log);
@@ -287,6 +301,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
       await this.registerDevice(alertDevice);
       await alertDevice.setAttribute(BooleanState, 'stateValue', true, this.log);
     }
+    await this.history.add(this.context, { event: 'Startup', type: 'startup' });
   }
 
   override async onConfigure(): Promise<void> {
@@ -295,6 +310,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
   }
 
   override async onShutdown(reason?: string): Promise<void> {
+    await this.history.add(this.context, { event: 'Shutdown', type: 'shutdown' });
     await super.onShutdown(reason);
     this.log.info('onShutdown called with reason:', reason ?? 'none');
     if (this.config.unregisterOnShutdown) await this.unregisterAllDevices();
@@ -335,8 +351,6 @@ export class Platform extends MatterbridgeDynamicPlatform {
    * It also updates the current mode and the last security mode so it can be restored on restart.
    */
   async setModeOff(): Promise<void> {
-    this.currentMode = MODE_OFF;
-    await this.context?.set('LastSecurityMode', MODE_OFF);
     await this.getDeviceById(this.getId(MODE_OFF))?.setAttribute(DoorLock, 'lockState', DoorLock.LockState.Locked, this.log);
     await this.syncronizeModes(MODE_OFF);
     await this.resetAlerts();
@@ -350,7 +364,9 @@ export class Platform extends MatterbridgeDynamicPlatform {
    */
   async syncronizeModes(mode: Modes): Promise<void> {
     this.log.info(`Synchronizing modes for mode ${mode}`);
+    const modeChanged = this.currentMode !== mode;
     this.currentMode = mode;
+    if (modeChanged) await this.history.add(this.context, { event: mode, type: 'mode' });
     await this.context?.set('LastSecurityMode', mode);
     if (mode === MODE_OFF) await this.resetAlerts();
     for (const m of modes) {

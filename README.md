@@ -28,8 +28,9 @@ This plugin allows you to create a security system.
 - Five preconfigured setters: Home, Away, Night, Vacation, Off.
 - Four preconfigured triggers: Home, Away, Night, 24h.
 - Five preconfigured alerts: Home, Away, Night, 24h, Master.
+- Persistent history of the latest 100 mode changes, accepted triggers, startups and shutdowns, with timestamps.
 
-The plugin requires matterbridge v.3.10.0.
+The plugin requires matterbridge v.3.10.10.
 
 ### Modes
 
@@ -85,6 +86,20 @@ Alerts are the alarm states exposed by the plugin; they stay active for the conf
 | Night  | Alert state for Night.                             |
 | 24h    | Alert state for 24h.                               |
 | Master | General alert state (not tied to a specific mode). |
+
+### Event history
+
+The platform's `events` array contains the latest 100 security events, oldest first. History is saved in plugin storage under `SecurityEvents` and restored on startup.
+
+Each entry contains `datetime` (an ISO 8601 UTC timestamp), `event` (the mode or trigger name, `Startup`, or `Shutdown`), and `type` (`mode`, `trigger`, `startup`, or `shutdown`).
+
+- Mode events are recorded only when the mode changes, including changes to Off. Restoring the mode on startup does not add a mode event.
+- Trigger events are recorded only when a trigger activates alerts in the current mode. Ignored triggers and automatic alert resets do not add events.
+- Startup events are recorded after initialization completes. Shutdown events are saved before plugin storage closes.
+
+```json
+{ "datetime": "2026-10-17T17:38:25.632Z", "event": "Mode Away", "type": "mode" }
+```
 
 ## Style guide
 
