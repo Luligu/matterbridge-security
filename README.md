@@ -31,7 +31,7 @@ This plugin allows you to create a security system.
 - Persistent history of mode changes, accepted triggers, startups and shutdowns, with timestamps and a configurable event limit (default: 100).
 - Color-coded frontend event table with local date and time display.
 
-The plugin requires matterbridge v.3.10.10.
+The plugin requires matterbridge v.3.11.0.
 
 ### Modes
 
