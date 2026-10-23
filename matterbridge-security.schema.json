@@ -36,6 +36,14 @@
       "type": "number",
       "default": 60
     },
+    "eventsNumber": {
+      "title": "Events Number",
+      "description": "The maximum number of security events retained in history (10 to 1000).",
+      "type": "integer",
+      "minimum": 10,
+      "maximum": 1000,
+      "default": 100
+    },
     "useSetters": {
       "title": "Use Setters",
       "description": "Enable the setters devices. This will create a device for each mode that can be used to trigger the mode change when the controller doesn't allow to lock unlock doors from presence automations.",
