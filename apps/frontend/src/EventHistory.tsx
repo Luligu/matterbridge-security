@@ -3,7 +3,7 @@
  * @description Security event history table.
  * @author Luca Liguori
  * @created 2026-10-17
- * @version 1.0.0
+ * @version 1.0.1
  * @license Apache-2.0
  *
  * Copyright 2026 Luca Liguori.
@@ -63,7 +63,7 @@ export default function EventHistory() {
 
   const loadEvents = useCallback(
     async (signal?: AbortSignal) =>
-      fetch('/plugins/matterbridge-security/api/events', { signal, headers: { Accept: 'application/json' } })
+      fetch(`${import.meta.env.BASE_URL}api/events`, { signal, headers: { Accept: 'application/json' } })
         .then(async (response) => {
           if (!response.ok) throw new Error(`Unable to load event history (HTTP ${response.status}).`);
           const data: unknown = await response.json();

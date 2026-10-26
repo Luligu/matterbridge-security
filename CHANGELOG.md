@@ -30,6 +30,20 @@ If you like this project and find it useful, please consider giving it a star on
 
 ## [1.3.1] - Dev branch
 
+### Changed
+
+- [agents]: Update `.codex/config.toml` to v.1.0.6: document the default workspace permissions and opt-in Matterbridge profiles.
+- [vscode]: Update Docker install tasks in `.vscode/tasks.json` to download installer scripts before running them.
+- [scripts]: Update `scripts/git-sync-dev.mjs` to v.2.1.0: stop when local dev lacks remote commits and add `--force-if-includes` to rebase pushes.
+- [scripts]: Update `scripts/prepublish-clean.mjs` to v.2.2.0: strip package metadata, preserve formatting, improve cleanup logs and reject unknown arguments.
+- [package]: Delegate package metadata cleanup in `prepublishOnly` to `scripts/prepublish-clean.mjs`.
+- [package]: Bump `oxlint-tsgolint` to v.7.0.2005.
+- [frontend]: Bump `vite` to v.8.3.5.
+
+### Fixed
+
+- [frontend]: Preserve the Home Assistant Ingress path when fetching security event history.
+
 <a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="80"></a>
 
 ## [1.3.0] - 2026-10-23

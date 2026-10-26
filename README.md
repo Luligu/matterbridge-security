@@ -94,6 +94,8 @@ The platform's `events` array contains the latest security events, oldest first.
 
 The plugin frontend displays all retained events, oldest first, with color-coded event types and dates formatted for your browser's locale and timezone. Use **Refresh** to load the latest events. Timestamps remain in ISO format in storage and in the plugin's `GET /plugins/matterbridge-security/api/events` response.
 
+Event history requests use the frontend base URL, preserving the Home Assistant Ingress path when accessed through Home Assistant.
+
 Trigger events are displayed as **Alarm** in the frontend (for example, **Alarm Away**). Stored events and the API retain the `trigger` type and original trigger names.
 
 Each entry contains `datetime` (an ISO 8601 UTC timestamp), `event` (the mode or trigger name, `Startup`, or `Shutdown`), and `type` (`mode`, `trigger`, `startup`, or `shutdown`).
