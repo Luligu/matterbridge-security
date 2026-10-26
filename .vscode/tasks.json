@@ -178,7 +178,7 @@
       "detail": "Build and pack the package tarball using mb-run",
       "type": "shell",
       "command": "npx",
-      "args": ["--yes", "mb-run", "--pack"],
+      "args": ["--yes", "mb-run", "--pack", "local"],
       "group": { "kind": "build", "isDefault": false },
       "problemMatcher": []
     },
@@ -187,7 +187,7 @@
       "detail": "Build, minify and pack the package tarball using mb-run",
       "type": "shell",
       "command": "npx",
-      "args": ["--yes", "mb-run", "--pack", "minify"],
+      "args": ["--yes", "mb-run", "--pack", "local", "minify"],
       "group": { "kind": "build", "isDefault": false },
       "problemMatcher": []
     },
@@ -196,7 +196,7 @@
       "detail": "Build, minify, obfuscate and pack the package tarball using mb-run",
       "type": "shell",
       "command": "npx",
-      "args": ["--yes", "mb-run", "--pack", "minify", "obfuscate"],
+      "args": ["--yes", "mb-run", "--pack", "local", "minify", "obfuscate"],
       "group": { "kind": "build", "isDefault": false },
       "problemMatcher": []
     },
