@@ -1,10 +1,12 @@
 /**
- * @file vitest/historyGraph.test.ts
+ * @file apps/frontend/src/vitest/historyGraph.test.ts
  * @description Endpoint graph filtering, ordering and local calendar totals.
  * @author Luca Liguori
  */
 
-import { buildEventGraph, type HistoryEvent } from '../apps/frontend/src/historyGraph.js';
+import { describe, expect, it } from 'vitest';
+
+import { buildEventGraph, type HistoryEvent } from '../historyGraph.js';
 
 const history: HistoryEvent[] = [
   { datetime: '2026-10-25T12:00:00.000Z', event: 'Mode Away', type: 'mode' },
