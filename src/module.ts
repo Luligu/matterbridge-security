@@ -103,7 +103,7 @@ export default function initializePlugin(matterbridge: PlatformMatterbridge, log
 export class Platform extends MatterbridgeDynamicPlatform {
   shortTimeout = 500;
   currentMode: Modes = MODE_OFF;
-  private readonly history = new SecurityHistory();
+  private readonly history: SecurityHistory;
 
   /**
    * Get the latest security events in chronological order.
@@ -139,6 +139,8 @@ export class Platform extends MatterbridgeDynamicPlatform {
     }
     // v8 ignore stop
 
+    this.history = new SecurityHistory(this.config.eventsNumber);
+
     this.log.info('Finished initializing platform:', this.config.name);
   }
 
@@ -147,7 +149,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
 
     // Make sure the platform is ready before registering devices
     await this.ready;
-    const context = await this.history.load(this.context, this.config.eventsNumber);
+    const context = await this.history.load(this.context);
     const triggerSetterDeviceTypes: AtLeastOne<DeviceTypeDefinition> = this.config.useSwitch
       ? [onOffLightSwitch, bridgedNode]
       : [mountedOnOffControl, onOffPlugInUnit, bridgedNode];

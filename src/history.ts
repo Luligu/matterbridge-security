@@ -35,20 +35,28 @@ export type SecurityEvent = { datetime: string } & SecurityEventData;
 export class SecurityHistory {
   events: SecurityEvent[] = [];
   private eventWrite: Promise<void> = Promise.resolve();
-  private eventsNumber = 100;
+  private readonly eventsNumber: number;
+
+  /**
+   * Create a new security history store.
+   *
+   * @param {number} [eventsNumber] Maximum number of events to retain, from 10 to 1000, defaulting to 100.
+   * @throws {Error} If the limit is not an integer between 10 and 1000.
+   */
+  constructor(eventsNumber = 100) {
+    if (!Number.isInteger(eventsNumber) || eventsNumber < 10 || eventsNumber > 1000) throw new Error('eventsNumber must be an integer between 10 and 1000.');
+    this.eventsNumber = eventsNumber;
+  }
 
   /**
    * Restore security history during startup.
    *
    * @param {NodeStorage | undefined} context Plugin storage.
-   * @param {number} [eventsNumber] Maximum number of events to retain, from 10 to 1000, defaulting to 100.
    * @returns {Promise<NodeStorage>} Plugin storage after history has been loaded.
-   * @throws {Error} If plugin storage is unavailable, the limit is invalid or history cannot be read.
+   * @throws {Error} If plugin storage is unavailable or history cannot be read.
    */
-  async load(context: NodeStorage | undefined, eventsNumber = 100): Promise<NodeStorage> {
+  async load(context: NodeStorage | undefined): Promise<NodeStorage> {
     if (!context) throw new Error('Plugin storage is not available for security event history.');
-    if (!Number.isInteger(eventsNumber) || eventsNumber < 10 || eventsNumber > 1000) throw new Error('eventsNumber must be an integer between 10 and 1000.');
-    this.eventsNumber = eventsNumber;
     this.events = (await context.get<SecurityEvent[]>('SecurityEvents', [])).slice(-this.eventsNumber);
     return context;
   }

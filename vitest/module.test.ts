@@ -26,7 +26,7 @@ import {
   startServerNode,
   stopServerNode,
 } from 'matterbridge/test-utils/vitest';
-import { wait } from 'matterbridge/utils';
+import { waiter } from 'matterbridge/utils';
 
 import type { SecurityEvent } from '../src/history.js';
 import initializePlugin, {
@@ -50,7 +50,6 @@ await setupTest(NAME, false);
 describe('TestPlatform', () => {
   let matterbridge: PlatformMatterbridge;
   let platform: Platform;
-  const pause = process.env.GITHUB_ACTIONS === 'true' ? 250 : 100;
 
   const config = JSON.parse(readFileSync(path.join('.', 'matterbridge-security.config.json'), 'utf-8')) as SecurityPlatformConfig;
 
@@ -123,11 +122,11 @@ describe('TestPlatform', () => {
       expect(internal).toBeDefined();
       if (internal) internal.enableTimeout = false;
       await device?.invokeBehaviorCommand(DoorLock, 'lockDoor', {});
-      await wait(pause);
+      await waiter(`Mode ${mode} locked`, () => device.getAttribute(DoorLock, 'lockState') === DoorLock.LockState.Locked, true, 1000, 10);
       await device?.invokeBehaviorCommand(DoorLock, 'unlockDoor', {});
-      await wait(pause);
+      await waiter('Mode reset to off', () => platform.getDeviceById(platform.getId(MODE_OFF))?.getAttribute(DoorLock, 'lockState') === DoorLock.LockState.Locked, true, 1000, 10);
       await device?.invokeBehaviorCommand(DoorLock, 'unlockWithTimeout', { timeout: 1 });
-      await wait(pause);
+      await waiter(`Mode ${mode} unlocked`, () => device.getAttribute(DoorLock, 'lockState') === DoorLock.LockState.Unlocked, true, 1000, 10);
     }
 
     // Test setters
@@ -135,7 +134,7 @@ describe('TestPlatform', () => {
       const device = platform.getDeviceById(platform.getId(setter));
       expect(device).toBeDefined();
       await device?.invokeBehaviorCommand(OnOff, 'on');
-      await wait(pause);
+      await waiter(`Setter ${setter} reset`, () => device?.getAttribute(OnOff, 'onOff') === false, true, 1000, 10);
     }
 
     // Test triggers
@@ -145,13 +144,13 @@ describe('TestPlatform', () => {
       expect(device).toBeDefined();
       platform.currentMode = MODE_OFF;
       await device?.invokeBehaviorCommand(OnOff, 'on');
-      await wait(pause);
+      await waiter(`Trigger ${trigger} reset`, () => device?.getAttribute(OnOff, 'onOff') === false, true, 1000, 10);
       platform.currentMode = MODE_VACATION;
       await device?.invokeBehaviorCommand(OnOff, 'on');
-      await wait(pause);
+      await waiter(`Trigger ${trigger} reset`, () => device?.getAttribute(OnOff, 'onOff') === false, true, 1000, 10);
       platform.currentMode = MODE_NIGHT;
       await device?.invokeBehaviorCommand(OnOff, 'on');
-      await wait(pause);
+      await waiter(`Trigger ${trigger} reset`, () => device?.getAttribute(OnOff, 'onOff') === false, true, 1000, 10);
     }
     platform.config.unregisterOnShutdown = true;
     await platform.onShutdown('Test reason');
@@ -247,14 +246,22 @@ describe('TestPlatform', () => {
     });
 
     it('should use the configured number of events after startup', async () => {
-      historyPlatform.config.eventsNumber = 10;
-      await historyPlatform.onStart();
-      for (let index = 0; index < 5; index++) {
-        await historyPlatform.syncronizeModes(MODE_AWAY);
-        await historyPlatform.setModeOff();
+      const configuredPlatform = new Platform(matterbridge, log, { ...config, eventsNumber: 10, unregisterOnShutdown: true });
+      addMatterbridge(configuredPlatform);
+      await configuredPlatform.ready;
+      await configuredPlatform.context?.set('SecurityEvents', []);
+      await configuredPlatform.context?.set('LastSecurityMode', MODE_OFF);
+      try {
+        await configuredPlatform.onStart();
+        for (let index = 0; index < 5; index++) {
+          await configuredPlatform.syncronizeModes(MODE_AWAY);
+          await configuredPlatform.setModeOff();
+        }
+        expect(configuredPlatform.events.map((event) => event.event)).toEqual(Array.from({ length: 10 }, (_, index) => (index % 2 === 0 ? MODE_AWAY : MODE_OFF)));
+        expect(await configuredPlatform.context?.get('SecurityEvents')).toEqual(configuredPlatform.events);
+      } finally {
+        await configuredPlatform.onShutdown();
       }
-      expect(historyPlatform.events.map((event) => event.event)).toEqual(Array.from({ length: 10 }, (_, index) => (index % 2 === 0 ? MODE_AWAY : MODE_OFF)));
-      expect(await historyPlatform.context?.get('SecurityEvents')).toEqual(historyPlatform.events);
     });
 
     it('should record only triggers that activate alerts', async () => {
@@ -278,7 +285,7 @@ describe('TestPlatform', () => {
         type: 'trigger',
       });
       expect(await historyPlatform.context?.get('SecurityEvents')).toEqual(historyPlatform.events);
-      await wait(pause);
+      await waiter('Triggers reset', () => away?.getAttribute(OnOff, 'onOff') === false && home?.getAttribute(OnOff, 'onOff') === false, true, 1000, 10);
     });
 
     it('should persist shutdown after pending events and restore it on the next startup', async () => {
