@@ -1,5 +1,5 @@
 ---
-description: 'How a plugin serves its own frontend SPA and custom REST API via onFetch v.1.0.0'
+description: 'How a plugin serves its own frontend SPA and custom REST API via onFetch v.1.0.1'
 ---
 
 # Matterbridge Plugin Frontend Guide
@@ -17,6 +17,27 @@ When a plugin package contains a built SPA at `apps/frontend/build/index.html`, 
 - `/plugins/<pluginName>/{*splat}` serves the plugin's `index.html` as the SPA fallback for unmatched routes.
 
 A plugin frontend must call its own `/plugins/<pluginName>/api/...` namespace rather than the core `/api/...` endpoints.
+
+## Preserve the base path through Home Assistant Ingress
+
+Build plugin API URLs from Vite's `import.meta.env.BASE_URL`, without a leading slash on the appended path:
+
+```ts
+const response = await fetch(`${import.meta.env.BASE_URL}api/events`, {
+  signal,
+  headers: { Accept: 'application/json' },
+});
+```
+
+The frontend template's `vite.config.ts` uses `/plugins/<pluginName>/` as its development base and `./` as its production base. Keep this arrangement and the development proxy for `${base}api`:
+
+- In development, the request goes to `/plugins/<pluginName>/api/events` and Vite proxies it to Matterbridge.
+- In production, `./api/events` resolves relative to the plugin frontend document, retaining any reverse proxy prefix.
+- Through Home Assistant Ingress, `/api/hassio_ingress/<token>/plugins/<pluginName>/` therefore requests `/api/hassio_ingress/<token>/plugins/<pluginName>/api/events`.
+
+Do not hardcode `fetch('/plugins/<pluginName>/api/events')`, a core `/api/...` URL or the Matterbridge host/port in frontend code. A root-relative URL discards the Ingress prefix and sends the request outside the addon route. The absolute plugin paths listed above describe server routes, not URLs to hardcode in browser requests.
+
+Open the plugin frontend at its directory URL with a trailing slash, as Matterbridge does. Relative production URLs resolve against the document URL; if adding nested history-based SPA routes, ensure requests still resolve from the plugin root. Verify API requests during Vite development, direct Matterbridge access and Home Assistant Ingress access.
 
 ## Use `onFetch` for a plugin's custom API
 
