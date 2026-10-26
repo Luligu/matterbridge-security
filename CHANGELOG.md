@@ -32,10 +32,11 @@ If you like this project and find it useful, please consider giving it a star on
 
 ### Added
 
-- [security]: Add mode and trigger configuration links with the endpoint name in the query string.
+- [frontend]: Add configuration links and selectable timeline and daily total graphs for modes, setters, triggers and alerts.
 
 ### Changed
 
+- [config]: Set event history retention to 100–1000 events with a default of 200.
 - [agents]: Update `.codex/config.toml` to v.1.0.6: document the default workspace permissions and opt-in Matterbridge profiles.
 - [vscode]: Update Docker install tasks in `.vscode/tasks.json` to download installer scripts before running them.
 - [scripts]: Update `scripts/git-sync-dev.mjs` to v.2.1.0: stop when local dev lacks remote commits and add `--force-if-includes` to rebase pushes.

@@ -82,6 +82,7 @@ export type Alerts = typeof ALERT_AWAY | typeof ALERT_HOME | typeof ALERT_NIGHT 
 export type SecurityPlatformConfig = PlatformConfig & {
   securityRoom: string;
   alertTimeout: number;
+  /** Maximum retained security events: an integer from 100 to 1000, defaulting to 200. */
   eventsNumber: number;
   useSetters: boolean;
   useSwitch: boolean;
@@ -133,7 +134,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
     {
       config.securityRoom = config.securityRoom ?? 'Security';
       config.alertTimeout = config.alertTimeout ?? 60;
-      config.eventsNumber ??= 100;
+      config.eventsNumber ??= 200;
       config.useSetters = config.useSetters ?? true;
       config.useSwitch = config.useSwitch ?? false;
     }
@@ -250,6 +251,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
               await this.syncronizeModes(MODE_VACATION);
             } else if (setter === SET_OFF) await this.setModeOff();
           });
+        setterDevice.configUrl = `/plugins/matterbridge-security?endpoint=${encodeURIComponent(setter)}`;
         await this.registerDevice(setterDevice);
         await setterDevice.setAttribute(OnOff, 'onOff', false, this.log);
       }
@@ -304,6 +306,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
       const alertDevice = new MatterbridgeEndpoint([contactSensor, bridgedNode], { id: this.getId(alert) })
         .createDefaultBridgedDeviceBasicInformationClusterServer(this.getName(alert), this.getSerial(alert), undefined, 'Matterbridge', 'Matterbridge Security Plugin')
         .addRequiredClusters();
+      alertDevice.configUrl = `/plugins/matterbridge-security?endpoint=${encodeURIComponent(alert)}`;
       await this.registerDevice(alertDevice);
       await alertDevice.setAttribute(BooleanState, 'stateValue', true, this.log);
     }

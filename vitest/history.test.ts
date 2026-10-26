@@ -38,8 +38,8 @@ describe('SecurityHistory', () => {
     expect(history.events).toEqual([]);
   });
 
-  it('should restore only the latest 100 stored events in chronological order', async () => {
-    const events: SecurityEvent[] = Array.from({ length: 101 }, (_, index) => ({
+  it('should restore only the latest 200 stored events in chronological order', async () => {
+    const events: SecurityEvent[] = Array.from({ length: 201 }, (_, index) => ({
       datetime: `2026-10-17T17:${String(Math.floor(index / 60)).padStart(2, '0')}:${String(index % 60).padStart(2, '0')}.000Z`,
       event: index === 0 ? 'Mode Off' : 'Mode Away',
       type: 'mode',
@@ -66,17 +66,17 @@ describe('SecurityHistory', () => {
     expect(restored.events).toEqual(history.events);
   });
 
-  it('should discard the oldest event when adding event 101', async () => {
+  it('should discard the oldest event when adding event 201', async () => {
     await history.add(context, { event: 'Startup', type: 'startup' });
-    for (let index = 0; index < 100; index++) {
+    for (let index = 0; index < 200; index++) {
       await history.add(context, { event: 'Trigger Away', type: 'trigger' });
     }
-    expect(history.events).toHaveLength(100);
+    expect(history.events).toHaveLength(200);
     expect(history.events.every((event) => event.type === 'trigger')).toBe(true);
     expect(await context.get('SecurityEvents')).toEqual(history.events);
   });
 
-  it.each([10, 1000])('should apply the configured limit of %s to restored and new events', async (limit) => {
+  it.each([100, 1000])('should apply the configured limit of %s to restored and new events', async (limit) => {
     const limitedHistory = new SecurityHistory(limit);
     const events: SecurityEvent[] = Array.from({ length: limit + 1 }, () => ({ datetime, event: 'Trigger Away', type: 'trigger' }));
     await context.set('SecurityEvents', events);
@@ -87,8 +87,8 @@ describe('SecurityHistory', () => {
     expect(await context.get('SecurityEvents')).toEqual(limitedHistory.events);
   });
 
-  it.each([0, -1, 9, 1001, 10.5, Number.NaN, Infinity])('should reject invalid event limit %s', (limit) => {
-    expect(() => new SecurityHistory(limit)).toThrow('eventsNumber must be an integer between 10 and 1000.');
+  it.each([0, -1, 10, 99, 1001, 100.5, Number.NaN, Infinity])('should reject invalid event limit %s', (limit) => {
+    expect(() => new SecurityHistory(limit)).toThrow('eventsNumber must be an integer between 100 and 1000.');
   });
 
   it('should serialize concurrent writes while an earlier write is pending', async () => {

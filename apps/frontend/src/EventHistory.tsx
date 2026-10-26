@@ -25,10 +25,11 @@ import RefreshIcon from '@mui/icons-material/Refresh';
 import { Alert, Box, Button, Chip, LinearProgress, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Typography } from '@mui/material';
 import { useCallback, useEffect, useState } from 'react';
 
+import EventGraph from './EventGraph.tsx';
+import type { HistoryEvent } from './historyGraph.ts';
+
 const eventColors = { mode: 'info', trigger: 'error', startup: 'success', shutdown: 'warning' } as const;
 const dateFormatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'medium' });
-
-type HistoryEvent = { datetime: string; event: string; type: keyof typeof eventColors };
 
 /**
  * Validate an event received from the plugin API.
@@ -57,6 +58,7 @@ function isHistoryEvent(value: unknown): value is HistoryEvent {
  * @returns {JSX.Element} The event history table and its loading or error state.
  */
 export default function EventHistory() {
+  const endpoint = new URLSearchParams(window.location.search).get('endpoint')?.trim();
   const [events, setEvents] = useState<HistoryEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
@@ -77,7 +79,7 @@ export default function EventHistory() {
         .finally(() => {
           if (!signal?.aborted) setLoading(false);
         }),
-    [],
+    [setEvents, setError, setLoading],
   );
 
   useEffect(() => {
@@ -91,10 +93,10 @@ export default function EventHistory() {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
         <Box>
           <Typography id="event-history-title" variant="h5" component="h2">
-            Event history
+            {endpoint ? endpoint.replace(/^Trigger\b/, 'Alarm') : 'Event history'}
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Recorded events, oldest first. Times are shown in your local timezone.
+            {endpoint ? 'Endpoint event history · compare graph views below.' : 'Recorded events, oldest first. Times are shown in your local timezone.'}
           </Typography>
         </Box>
         <Button
@@ -115,47 +117,54 @@ export default function EventHistory() {
           {error}
         </Alert>
       )}
-      <Paper variant="outlined" sx={{ overflow: 'hidden', borderRadius: 2 }}>
-        {loading && <LinearProgress aria-label="Loading event history" />}
-        <TableContainer>
-          <Table aria-label="Security event history" aria-busy={loading} size="small" sx={{ '& .MuiTableCell-root': { py: 0.5 } }}>
-            <TableHead sx={{ bgcolor: 'action.hover' }}>
-              <TableRow>
-                <TableCell>Date and time</TableCell>
-                <TableCell>Type</TableCell>
-                <TableCell>Event</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {events.map((event, index) => (
-                <TableRow key={`${event.datetime}-${event.type}-${event.event}-${index}`} hover sx={{ '&:last-child td': { borderBottom: 0 } }}>
-                  <TableCell sx={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
-                    <time dateTime={event.datetime} title={event.datetime}>
-                      {dateFormatter.format(new Date(event.datetime))}
-                    </time>
-                  </TableCell>
-                  <TableCell>
-                    <Chip
-                      label={event.type === 'trigger' ? 'alarm' : event.type}
-                      color={eventColors[event.type]}
-                      size="small"
-                      sx={{ textTransform: 'capitalize', fontWeight: 600 }}
-                    />
-                  </TableCell>
-                  <TableCell sx={{ fontWeight: 500 }}>{event.type === 'trigger' ? event.event.replace(/^Trigger\b/, 'Alarm') : event.event}</TableCell>
-                </TableRow>
-              ))}
-              {!loading && !error && events.length === 0 && (
+      {endpoint ? (
+        <>
+          {loading && <LinearProgress aria-label="Loading endpoint history" sx={{ mb: 2 }} />}
+          {((!loading && !error) || events.length > 0) && <EventGraph events={events} endpoint={endpoint} />}
+        </>
+      ) : (
+        <Paper variant="outlined" sx={{ overflow: 'hidden', borderRadius: 2 }}>
+          {loading && <LinearProgress aria-label="Loading event history" />}
+          <TableContainer>
+            <Table aria-label="Security event history" aria-busy={loading} size="small" sx={{ '& .MuiTableCell-root': { py: 0.5 } }}>
+              <TableHead sx={{ bgcolor: 'action.hover' }}>
                 <TableRow>
-                  <TableCell colSpan={3} align="center" sx={{ py: 6, color: 'text.secondary' }}>
-                    No security events recorded yet.
-                  </TableCell>
+                  <TableCell>Date and time</TableCell>
+                  <TableCell>Type</TableCell>
+                  <TableCell>Event</TableCell>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+              </TableHead>
+              <TableBody>
+                {events.map((event, index) => (
+                  <TableRow key={`${event.datetime}-${event.type}-${event.event}-${index}`} hover sx={{ '&:last-child td': { borderBottom: 0 } }}>
+                    <TableCell sx={{ whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                      <time dateTime={event.datetime} title={event.datetime}>
+                        {dateFormatter.format(new Date(event.datetime))}
+                      </time>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={event.type === 'trigger' ? 'alarm' : event.type}
+                        color={eventColors[event.type]}
+                        size="small"
+                        sx={{ textTransform: 'capitalize', fontWeight: 600 }}
+                      />
+                    </TableCell>
+                    <TableCell sx={{ fontWeight: 500 }}>{event.type === 'trigger' ? event.event.replace(/^Trigger\b/, 'Alarm') : event.event}</TableCell>
+                  </TableRow>
+                ))}
+                {!loading && !error && events.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={3} align="center" sx={{ py: 6, color: 'text.secondary' }}>
+                      No security events recorded yet.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Paper>
+      )}
     </Box>
   );
 }

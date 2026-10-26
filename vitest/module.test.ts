@@ -30,6 +30,7 @@ import { waiter } from 'matterbridge/utils';
 
 import type { SecurityEvent } from '../src/history.js';
 import initializePlugin, {
+  alerts,
   MODE_AWAY,
   MODE_NIGHT,
   MODE_OFF,
@@ -102,7 +103,7 @@ describe('TestPlatform', () => {
     Reflect.deleteProperty(legacyConfig, 'eventsNumber');
     platform = new Platform(matterbridge, log, legacyConfig);
     addMatterbridge(platform);
-    expect(platform.config.eventsNumber).toBe(100);
+    expect(platform.config.eventsNumber).toBe(200);
     expect(loggerInfoSpy).toHaveBeenCalledWith('Initializing platform:', config.name);
     expect(loggerInfoSpy).toHaveBeenCalledWith('Finished initializing platform:', config.name);
   });
@@ -118,7 +119,7 @@ describe('TestPlatform', () => {
       const device = platform.getDeviceById(platform.getId(mode));
       expect(device).toBeDefined();
       if (!device) continue;
-      expect(device.configUrl).toBe(`/plugins/matterbridge-security/?endpoint=${encodeURIComponent(mode)}`);
+      expect(device.configUrl).toBe(`/plugins/matterbridge-security?endpoint=${encodeURIComponent(mode)}`);
       const internal = await internalFor(device, DoorLock);
       expect(internal).toBeDefined();
       if (internal) internal.enableTimeout = false;
@@ -143,7 +144,7 @@ describe('TestPlatform', () => {
       platform.currentMode = trigger.replaceAll('Trigger', 'Mode') as Modes;
       const device = platform.getDeviceById(platform.getId(trigger));
       expect(device).toBeDefined();
-      expect(device?.configUrl).toBe(`/plugins/matterbridge-security/?endpoint=${encodeURIComponent(trigger)}`);
+      expect(device?.configUrl).toBe(`/plugins/matterbridge-security?endpoint=${encodeURIComponent(trigger)}`);
       platform.currentMode = MODE_OFF;
       await device?.invokeBehaviorCommand(OnOff, 'on');
       await waiter(`Trigger ${trigger} reset`, () => device?.getAttribute(OnOff, 'onOff') === false, true, 1000, 10);
@@ -205,6 +206,24 @@ describe('TestPlatform', () => {
       await historyPlatform.onShutdown();
     });
 
+    it('should expose configuration links for all five setters', async () => {
+      await historyPlatform.onStart();
+      for (const setter of setters) {
+        const device = historyPlatform.getDeviceById(historyPlatform.getId(setter));
+        expect(device).toBeDefined();
+        expect(device?.configUrl).toBe(`/plugins/matterbridge-security?endpoint=${encodeURIComponent(setter)}`);
+      }
+    });
+
+    it('should expose configuration links for all five alerts', async () => {
+      await historyPlatform.onStart();
+      for (const alert of alerts) {
+        const device = historyPlatform.getDeviceById(historyPlatform.getId(alert));
+        expect(device).toBeDefined();
+        expect(device?.configUrl).toBe(`/plugins/matterbridge-security?endpoint=${encodeURIComponent(alert)}`);
+      }
+    });
+
     it('should return all events from the plugin history API', async () => {
       await historyPlatform.syncronizeModes(MODE_AWAY);
       expect(await historyPlatform.onFetch('GET', 'events')).toEqual(historyPlatform.events);
@@ -241,25 +260,25 @@ describe('TestPlatform', () => {
       await historyPlatform.context?.set('SecurityEvents', events);
       await historyPlatform.context?.set('LastSecurityMode', MODE_AWAY);
       await historyPlatform.onStart();
-      expect(historyPlatform.config.eventsNumber).toBe(100);
+      expect(historyPlatform.config.eventsNumber).toBe(200);
       expect(historyPlatform.currentMode).toBe(MODE_AWAY);
       expect(historyPlatform.events).toEqual([...events, { datetime: expect.any(String), event: 'Startup', type: 'startup' }]);
       expect(await historyPlatform.context?.get('SecurityEvents')).toEqual(historyPlatform.events);
     });
 
     it('should use the configured number of events after startup', async () => {
-      const configuredPlatform = new Platform(matterbridge, log, { ...config, eventsNumber: 10, unregisterOnShutdown: true });
+      const configuredPlatform = new Platform(matterbridge, log, { ...config, eventsNumber: 100, unregisterOnShutdown: true });
       addMatterbridge(configuredPlatform);
       await configuredPlatform.ready;
       await configuredPlatform.context?.set('SecurityEvents', []);
       await configuredPlatform.context?.set('LastSecurityMode', MODE_OFF);
       try {
         await configuredPlatform.onStart();
-        for (let index = 0; index < 5; index++) {
+        for (let index = 0; index < 50; index++) {
           await configuredPlatform.syncronizeModes(MODE_AWAY);
           await configuredPlatform.setModeOff();
         }
-        expect(configuredPlatform.events.map((event) => event.event)).toEqual(Array.from({ length: 10 }, (_, index) => (index % 2 === 0 ? MODE_AWAY : MODE_OFF)));
+        expect(configuredPlatform.events.map((event) => event.event)).toEqual(Array.from({ length: 100 }, (_, index) => (index % 2 === 0 ? MODE_AWAY : MODE_OFF)));
         expect(await configuredPlatform.context?.get('SecurityEvents')).toEqual(configuredPlatform.events);
       } finally {
         await configuredPlatform.onShutdown();

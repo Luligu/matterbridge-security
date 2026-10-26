@@ -28,8 +28,9 @@ This plugin allows you to create a security system.
 - Five preconfigured setters: Home, Away, Night, Vacation, Off.
 - Four preconfigured triggers: Home, Away, Night, 24h.
 - Five preconfigured alerts: Home, Away, Night, 24h, Master.
-- Persistent history of mode changes, accepted triggers, startups and shutdowns, with timestamps and a configurable event limit (default: 100).
+- Persistent history of mode changes, accepted triggers, startups and shutdowns, with timestamps and a configurable event limit (default: 200).
 - Color-coded frontend event table with local date and time display.
+- Endpoint graphs for modes, setters, triggers and alerts, with a compact timeline, daily totals and date/time tooltips.
 
 The plugin requires matterbridge v.3.11.0.
 
@@ -88,13 +89,15 @@ Alerts are the alarm states exposed by the plugin; they stay active for the conf
 | 24h    | Alert state for 24h.                               |
 | Master | General alert state (not tied to a specific mode). |
 
-Mode and trigger configuration links open `/plugins/matterbridge-security/?endpoint=<name>` with the endpoint name URL-encoded. The trailing slash preserves relative frontend API requests.
+Mode, setter, trigger and alert configuration links open `/plugins/matterbridge-security?endpoint=<name>` with the endpoint name URL-encoded.
 
 ### Event history
 
-The platform's `events` array contains the latest security events, oldest first. Set `eventsNumber` in the plugin configuration to an integer from 10 to 1000 to control how many events are retained (default: 100). Existing configurations without this option default to 100 on startup. History is saved in plugin storage under `SecurityEvents` and restored on startup.
+The platform's `events` array contains the latest security events, oldest first. Set `eventsNumber` in the plugin configuration to an integer from 100 to 1000 to control how many events are retained (default: 200). Existing configurations without this option default to 200 on startup. History is saved in plugin storage under `SecurityEvents` and restored on startup.
 
 The plugin frontend displays all retained events, oldest first, with color-coded event types and dates formatted for your browser's locale and timezone. Use **Refresh** to load the latest events. Timestamps remain in ISO format in storage and in the plugin's `GET /plugins/matterbridge-security/api/events` response.
+
+When an `endpoint` query parameter is present (for example, `?endpoint=Mode%20Away` or `?endpoint=Trigger%20Away`), the frontend replaces the table with graphs for that exact endpoint. **Compare all** shows a bar timeline and daily totals together; use the view buttons to inspect each separately. Timeline bars mark individual occurrences at their exact timestamps; their width does not represent duration. Hover or focus bars for exact values. Setter graphs show changes to their corresponding mode from any control; setter presses are not recorded separately. Alert Away, Home, Night and 24h graphs use the corresponding accepted trigger events; Alert Master combines all four trigger types. Graphs use retained occurrences only, not inferred active durations; daily totals group events by your local calendar day and omit days without matching events.
 
 Event history requests use the frontend base URL, preserving the Home Assistant Ingress path when accessed through Home Assistant.
 

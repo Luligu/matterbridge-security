@@ -3,7 +3,7 @@
  * @description Persistent security event history.
  * @author Luca Liguori
  * @created 2026-10-17
- * @version 1.0.2
+ * @version 1.0.3
  * @license Apache-2.0
  *
  * Copyright 2026 Luca Liguori.
@@ -40,11 +40,11 @@ export class SecurityHistory {
   /**
    * Create a new security history store.
    *
-   * @param {number} [eventsNumber] Maximum number of events to retain, from 10 to 1000, defaulting to 100.
-   * @throws {Error} If the limit is not an integer between 10 and 1000.
+   * @param {number} [eventsNumber] Maximum number of events to retain, from 100 to 1000, defaulting to 200.
+   * @throws {Error} If the limit is not an integer between 100 and 1000.
    */
-  constructor(eventsNumber = 100) {
-    if (!Number.isInteger(eventsNumber) || eventsNumber < 10 || eventsNumber > 1000) throw new Error('eventsNumber must be an integer between 10 and 1000.');
+  constructor(eventsNumber = 200) {
+    if (!Number.isInteger(eventsNumber) || eventsNumber < 100 || eventsNumber > 1000) throw new Error('eventsNumber must be an integer between 100 and 1000.');
     this.eventsNumber = eventsNumber;
   }
 
