@@ -86,8 +86,8 @@ describe('TestPlatform', () => {
     platform = initializePlugin(matterbridge, log, config);
     addMatterbridge(platform);
     expect(platform).toBeInstanceOf(Platform);
-    expect(loggerInfoSpy).toHaveBeenCalledWith('Initializing platform:', config.name);
-    expect(loggerInfoSpy).toHaveBeenCalledWith('Finished initializing platform:', config.name);
+    expect(loggerInfoSpy).toHaveBeenCalledWith(`Initializing platform ${config.name}...`);
+    expect(loggerInfoSpy).toHaveBeenCalledWith(`Platform ${config.name} initialized successfully`);
     await platform.ready;
     await platform.onShutdown();
   });
@@ -104,15 +104,15 @@ describe('TestPlatform', () => {
     platform = new Platform(matterbridge, log, legacyConfig);
     addMatterbridge(platform);
     expect(platform.config.eventsNumber).toBe(200);
-    expect(loggerInfoSpy).toHaveBeenCalledWith('Initializing platform:', config.name);
-    expect(loggerInfoSpy).toHaveBeenCalledWith('Finished initializing platform:', config.name);
+    expect(loggerInfoSpy).toHaveBeenCalledWith(`Initializing platform ${config.name}...`);
+    expect(loggerInfoSpy).toHaveBeenCalledWith(`Platform ${config.name} initialized successfully`);
   });
 
   it('should call onStart with reason', async () => {
     await platform.onStart('Test reason');
     platform.shortTimeout = 10;
     platform.config.alertTimeout = 0.001;
-    expect(loggerInfoSpy).toHaveBeenCalledWith('onStart called with reason:', 'Test reason');
+    expect(loggerInfoSpy).toHaveBeenCalledWith(`Starting platform ${config.name} with reason: Test reason...`);
 
     // Test modes
     for (const mode of modes) {
@@ -168,18 +168,18 @@ describe('TestPlatform', () => {
     addMatterbridge(platform);
     platform.config.useSwitch = true;
     await platform.onStart();
-    expect(loggerInfoSpy).toHaveBeenCalledWith('onStart called with reason:', 'none');
+    expect(loggerInfoSpy).toHaveBeenCalledWith(`Starting platform ${config.name} with reason: no reason provided...`);
   });
 
   it('should call onConfigure', async () => {
     await platform.onConfigure();
-    expect(loggerInfoSpy).toHaveBeenCalledWith('onConfigure called');
+    expect(loggerInfoSpy).toHaveBeenCalledWith(`Configuring platform ${config.name}...`);
   });
 
   it('should call onShutdown with reason', async () => {
     platform.config.unregisterOnShutdown = true;
     await platform.onShutdown('Test reason');
-    expect(loggerInfoSpy).toHaveBeenCalledWith('onShutdown called with reason:', 'Test reason');
+    expect(loggerInfoSpy).toHaveBeenCalledWith(`Shutting down platform ${config.name} with reason: Test reason...`);
   });
 
   it('should call onShutdown without reason', async () => {
@@ -188,7 +188,7 @@ describe('TestPlatform', () => {
     platform.config.unregisterOnShutdown = true;
     await platform.ready;
     await platform.onShutdown();
-    expect(loggerInfoSpy).toHaveBeenCalledWith('onShutdown called with reason:', 'none');
+    expect(loggerInfoSpy).toHaveBeenCalledWith(`Shutting down platform ${config.name} with reason: no reason provided...`);
   });
 
   describe('Platform event recording', () => {

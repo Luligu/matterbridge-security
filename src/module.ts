@@ -127,7 +127,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
       throw new Error(`This plugin requires Matterbridge version >= "3.11.0". Please update Matterbridge to the latest version in the frontend.`);
     }
 
-    this.log.info('Initializing platform:', this.config.name);
+    this.log.info(`Initializing platform ${this.config.name}...`);
 
     // Set default values for config options if they are not set in old versions of the config
     // v8 ignore start -- defaults for missing options in old configs, never hit in tests
@@ -142,11 +142,11 @@ export class Platform extends MatterbridgeDynamicPlatform {
 
     this.history = new SecurityHistory(this.config.eventsNumber);
 
-    this.log.info('Finished initializing platform:', this.config.name);
+    this.log.info(`Platform ${this.config.name} initialized successfully`);
   }
 
   override async onStart(reason?: string): Promise<void> {
-    this.log.info('onStart called with reason:', reason ?? 'none');
+    this.log.info(`Starting platform ${this.config.name} with reason: ${reason ?? 'no reason provided'}...`);
 
     // Make sure the platform is ready before registering devices
     await this.ready;
@@ -311,11 +311,13 @@ export class Platform extends MatterbridgeDynamicPlatform {
       await alertDevice.setAttribute(BooleanState, 'stateValue', true, this.log);
     }
     await this.history.add(this.context, { event: 'Startup', type: 'startup' });
+    this.log.info(`Platform ${this.config.name} started successfully`);
   }
 
   override async onConfigure(): Promise<void> {
     await super.onConfigure();
-    this.log.info('onConfigure called');
+    this.log.info(`Configuring platform ${this.config.name}...`);
+    this.log.info(`Platform ${this.config.name} configured successfully`);
   }
 
   /**
@@ -333,8 +335,9 @@ export class Platform extends MatterbridgeDynamicPlatform {
   override async onShutdown(reason?: string): Promise<void> {
     await this.history.add(this.context, { event: 'Shutdown', type: 'shutdown' });
     await super.onShutdown(reason);
-    this.log.info('onShutdown called with reason:', reason ?? 'none');
+    this.log.info(`Shutting down platform ${this.config.name} with reason: ${reason ?? 'no reason provided'}...`);
     if (this.config.unregisterOnShutdown) await this.unregisterAllDevices();
+    this.log.info(`Platform ${this.config.name} shut down successfully`);
   }
 
   /**
