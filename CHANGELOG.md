@@ -30,6 +30,10 @@ If you like this project and find it useful, please consider giving it a star on
 
 ## [1.3.1] - Dev branch
 
+### Added
+
+- [security]: Add mode and trigger configuration links with the endpoint name in the query string.
+
 ### Changed
 
 - [agents]: Update `.codex/config.toml` to v.1.0.6: document the default workspace permissions and opt-in Matterbridge profiles.

@@ -206,6 +206,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
         .addCommandHandler('DoorLock.unlockWithTimeout', () => {
           this.log.info(`Received unlockWithTimeout command for mode: ${mode}`);
         });
+      doorLockDevice.configUrl = `/plugins/matterbridge-security?endpoint=${encodeURIComponent(mode)}`;
       await this.registerDevice(doorLockDevice);
       await doorLockDevice.setAttribute(DoorLock, 'lockState', DoorLock.LockState.Unlocked, this.log);
     }
@@ -293,6 +294,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
             }, this.config.alertTimeout * 1000).unref();
           }
         });
+      triggerDevice.configUrl = `/plugins/matterbridge-security?endpoint=${encodeURIComponent(trigger)}`;
       await this.registerDevice(triggerDevice);
       await triggerDevice.setAttribute(OnOff, 'onOff', false, this.log);
     }

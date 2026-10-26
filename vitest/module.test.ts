@@ -118,6 +118,7 @@ describe('TestPlatform', () => {
       const device = platform.getDeviceById(platform.getId(mode));
       expect(device).toBeDefined();
       if (!device) continue;
+      expect(device.configUrl).toBe(`/plugins/matterbridge-security/?endpoint=${encodeURIComponent(mode)}`);
       const internal = await internalFor(device, DoorLock);
       expect(internal).toBeDefined();
       if (internal) internal.enableTimeout = false;
@@ -142,6 +143,7 @@ describe('TestPlatform', () => {
       platform.currentMode = trigger.replaceAll('Trigger', 'Mode') as Modes;
       const device = platform.getDeviceById(platform.getId(trigger));
       expect(device).toBeDefined();
+      expect(device?.configUrl).toBe(`/plugins/matterbridge-security/?endpoint=${encodeURIComponent(trigger)}`);
       platform.currentMode = MODE_OFF;
       await device?.invokeBehaviorCommand(OnOff, 'on');
       await waiter(`Trigger ${trigger} reset`, () => device?.getAttribute(OnOff, 'onOff') === false, true, 1000, 10);

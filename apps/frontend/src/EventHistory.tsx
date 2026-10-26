@@ -118,7 +118,7 @@ export default function EventHistory() {
       <Paper variant="outlined" sx={{ overflow: 'hidden', borderRadius: 2 }}>
         {loading && <LinearProgress aria-label="Loading event history" />}
         <TableContainer>
-          <Table aria-label="Security event history" aria-busy={loading}>
+          <Table aria-label="Security event history" aria-busy={loading} size="small" sx={{ '& .MuiTableCell-root': { py: 0.5 } }}>
             <TableHead sx={{ bgcolor: 'action.hover' }}>
               <TableRow>
                 <TableCell>Date and time</TableCell>

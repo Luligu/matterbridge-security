@@ -88,6 +88,8 @@ Alerts are the alarm states exposed by the plugin; they stay active for the conf
 | 24h    | Alert state for 24h.                               |
 | Master | General alert state (not tied to a specific mode). |
 
+Mode and trigger configuration links open `/plugins/matterbridge-security/?endpoint=<name>` with the endpoint name URL-encoded. The trailing slash preserves relative frontend API requests.
+
 ### Event history
 
 The platform's `events` array contains the latest security events, oldest first. Set `eventsNumber` in the plugin configuration to an integer from 10 to 1000 to control how many events are retained (default: 100). Existing configurations without this option default to 100 on startup. History is saved in plugin storage under `SecurityEvents` and restored on startup.
