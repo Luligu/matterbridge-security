@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { buildEventGraph, type HistoryEvent } from '../historyGraph.js';
+import { buildEventGraph, type HistoryEvent } from '../src/historyGraph.js';
 
 const history: HistoryEvent[] = [
   { datetime: '2026-10-25T12:00:00.000Z', event: 'Mode Away', type: 'mode' },
