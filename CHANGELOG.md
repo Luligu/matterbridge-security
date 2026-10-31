@@ -44,6 +44,15 @@ If you like this project and find it useful, please consider giving it a star on
 - [package]: Delegate package metadata cleanup in `prepublishOnly` to `scripts/prepublish-clean.mjs`.
 - [package]: Bump `oxlint-tsgolint` to v.7.0.2005.
 - [frontend]: Bump `vite` to v.8.3.5.
+- [package]: Bump `@types/node` to v.26.6.6.
+- [agents]: Update `.github/commit-message-instructions.md` to v.1.0.1.
+- [vscode]: Update `.vscode/settings.json` to v.1.0.17.
+- [agents]: Update `AGENTS.md` to v.1.0.8.
+- [config]: Update `CODE_OF_CONDUCT.md` to v.1.0.0.
+- [config]: Update `CONTRIBUTING.md` to v.1.0.1.
+- [scripts]: Update `scripts/downloads.mjs`.
+- [config]: Add `SHARED-AGENTS.md`.
+- [config]: Add `TOOLCHAIN.md` v.1.0.1.
 
 ### Fixed
 
