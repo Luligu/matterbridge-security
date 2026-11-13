@@ -82,6 +82,7 @@ export type Alerts = typeof ALERT_AWAY | typeof ALERT_HOME | typeof ALERT_NIGHT 
 export type SecurityPlatformConfig = PlatformConfig & {
   securityRoom: string;
   alertTimeout: number;
+  /** Maximum retained security events: an integer from 100 to 1000, defaulting to 200. */
   eventsNumber: number;
   useSetters: boolean;
   useSwitch: boolean;
@@ -103,7 +104,7 @@ export default function initializePlugin(matterbridge: PlatformMatterbridge, log
 export class Platform extends MatterbridgeDynamicPlatform {
   shortTimeout = 500;
   currentMode: Modes = MODE_OFF;
-  private readonly history = new SecurityHistory();
+  private readonly history: SecurityHistory;
 
   /**
    * Get the latest security events in chronological order.
@@ -126,28 +127,30 @@ export class Platform extends MatterbridgeDynamicPlatform {
       throw new Error(`This plugin requires Matterbridge version >= "3.11.0". Please update Matterbridge to the latest version in the frontend.`);
     }
 
-    this.log.info('Initializing platform:', this.config.name);
+    this.log.info(`Initializing platform ${this.config.name}...`);
 
     // Set default values for config options if they are not set in old versions of the config
     // v8 ignore start -- defaults for missing options in old configs, never hit in tests
     {
       config.securityRoom = config.securityRoom ?? 'Security';
       config.alertTimeout = config.alertTimeout ?? 60;
-      config.eventsNumber ??= 100;
+      config.eventsNumber ??= 200;
       config.useSetters = config.useSetters ?? true;
       config.useSwitch = config.useSwitch ?? false;
     }
     // v8 ignore stop
 
-    this.log.info('Finished initializing platform:', this.config.name);
+    this.history = new SecurityHistory(this.config.eventsNumber);
+
+    this.log.info(`Platform ${this.config.name} initialized successfully`);
   }
 
   override async onStart(reason?: string): Promise<void> {
-    this.log.info('onStart called with reason:', reason ?? 'none');
+    this.log.info(`Starting platform ${this.config.name} with reason: ${reason ?? 'no reason provided'}...`);
 
     // Make sure the platform is ready before registering devices
     await this.ready;
-    const context = await this.history.load(this.context, this.config.eventsNumber);
+    const context = await this.history.load(this.context);
     const triggerSetterDeviceTypes: AtLeastOne<DeviceTypeDefinition> = this.config.useSwitch
       ? [onOffLightSwitch, bridgedNode]
       : [mountedOnOffControl, onOffPlugInUnit, bridgedNode];
@@ -204,6 +207,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
         .addCommandHandler('DoorLock.unlockWithTimeout', () => {
           this.log.info(`Received unlockWithTimeout command for mode: ${mode}`);
         });
+      doorLockDevice.configUrl = `/plugins/matterbridge-security?endpoint=${encodeURIComponent(mode)}`;
       await this.registerDevice(doorLockDevice);
       await doorLockDevice.setAttribute(DoorLock, 'lockState', DoorLock.LockState.Unlocked, this.log);
     }
@@ -247,6 +251,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
               await this.syncronizeModes(MODE_VACATION);
             } else if (setter === SET_OFF) await this.setModeOff();
           });
+        setterDevice.configUrl = `/plugins/matterbridge-security?endpoint=${encodeURIComponent(setter)}`;
         await this.registerDevice(setterDevice);
         await setterDevice.setAttribute(OnOff, 'onOff', false, this.log);
       }
@@ -291,6 +296,7 @@ export class Platform extends MatterbridgeDynamicPlatform {
             }, this.config.alertTimeout * 1000).unref();
           }
         });
+      triggerDevice.configUrl = `/plugins/matterbridge-security?endpoint=${encodeURIComponent(trigger)}`;
       await this.registerDevice(triggerDevice);
       await triggerDevice.setAttribute(OnOff, 'onOff', false, this.log);
     }
@@ -300,15 +306,18 @@ export class Platform extends MatterbridgeDynamicPlatform {
       const alertDevice = new MatterbridgeEndpoint([contactSensor, bridgedNode], { id: this.getId(alert) })
         .createDefaultBridgedDeviceBasicInformationClusterServer(this.getName(alert), this.getSerial(alert), undefined, 'Matterbridge', 'Matterbridge Security Plugin')
         .addRequiredClusters();
+      alertDevice.configUrl = `/plugins/matterbridge-security?endpoint=${encodeURIComponent(alert)}`;
       await this.registerDevice(alertDevice);
       await alertDevice.setAttribute(BooleanState, 'stateValue', true, this.log);
     }
     await this.history.add(this.context, { event: 'Startup', type: 'startup' });
+    this.log.info(`Platform ${this.config.name} started successfully`);
   }
 
   override async onConfigure(): Promise<void> {
     await super.onConfigure();
-    this.log.info('onConfigure called');
+    this.log.info(`Configuring platform ${this.config.name}...`);
+    this.log.info(`Platform ${this.config.name} configured successfully`);
   }
 
   /**
@@ -326,8 +335,9 @@ export class Platform extends MatterbridgeDynamicPlatform {
   override async onShutdown(reason?: string): Promise<void> {
     await this.history.add(this.context, { event: 'Shutdown', type: 'shutdown' });
     await super.onShutdown(reason);
-    this.log.info('onShutdown called with reason:', reason ?? 'none');
+    this.log.info(`Shutting down platform ${this.config.name} with reason: ${reason ?? 'no reason provided'}...`);
     if (this.config.unregisterOnShutdown) await this.unregisterAllDevices();
+    this.log.info(`Platform ${this.config.name} shut down successfully`);
   }
 
   /**

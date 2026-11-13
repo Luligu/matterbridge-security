@@ -38,11 +38,11 @@
     },
     "eventsNumber": {
       "title": "Events Number",
-      "description": "The maximum number of security events retained in history (10 to 1000).",
+      "description": "The maximum number of security events retained in history (100 to 1000).",
       "type": "integer",
-      "minimum": 10,
+      "minimum": 100,
       "maximum": 1000,
-      "default": 100
+      "default": 200
     },
     "useSetters": {
       "title": "Use Setters",

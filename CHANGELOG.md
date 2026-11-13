@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/matterbridge-security.svg)](https://www.npmjs.com/package/matterbridge-security)
 [![npm downloads](https://img.shields.io/npm/dt/matterbridge-security.svg)](https://www.npmjs.com/package/matterbridge-security)
 [![Docker Version](https://img.shields.io/docker/v/luligu/matterbridge/latest?label=docker%20version)](https://hub.docker.com/r/luligu/matterbridge)
-[![Docker Pulls](https://img.shields.io/docker/pulls/luligu/matterbridge?label=docker%20pulls)](https://hub.docker.com/r/luligu/matterbridge)
+[![Docker Pulls](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/Luligu/b21088ab9c9f2b119b42c33f0fef218d/raw/docker.json)](https://hub.docker.com/r/luligu/matterbridge)
 ![Node.js CI](https://github.com/Luligu/matterbridge-security/actions/workflows/build.yml/badge.svg)
 ![CodeQL](https://github.com/Luligu/matterbridge-security/actions/workflows/codeql.yml/badge.svg)
 [![codecov](https://codecov.io/gh/Luligu/matterbridge-security/branch/main/graph/badge.svg)](https://codecov.io/gh/Luligu/matterbridge-security)
@@ -27,6 +27,40 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 If you like this project and find it useful, please consider giving it a star on [GitHub](https://github.com/Luligu/matterbridge-security) and sponsoring it.
 
 <a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="120"></a>
+
+---
+
+## [1.3.1] - 2026-11-13
+
+### Added
+
+- [frontend]: Add configuration links and selectable timeline and daily total graphs for modes, setters, triggers and alerts.
+
+### Changed
+
+- [config]: Set event history retention to 100–1000 events with a default of 200.
+- [agents]: Update `.codex/config.toml` to v.1.0.6: document the default workspace permissions and opt-in Matterbridge profiles.
+- [vscode]: Update Docker install tasks in `.vscode/tasks.json` to download installer scripts before running them.
+- [scripts]: Update `scripts/git-sync-dev.mjs` to v.2.1.0: stop when local dev lacks remote commits and add `--force-if-includes` to rebase pushes.
+- [scripts]: Update `scripts/prepublish-clean.mjs` to v.2.2.0: strip package metadata, preserve formatting, improve cleanup logs and reject unknown arguments.
+- [package]: Delegate package metadata cleanup in `prepublishOnly` to `scripts/prepublish-clean.mjs`.
+- [package]: Bump `oxlint-tsgolint` to v.7.0.2005.
+- [frontend]: Bump `vite` to v.8.3.5.
+- [package]: Bump `@types/node` to v.26.6.6.
+- [agents]: Update `.github/commit-message-instructions.md` to v.1.0.1.
+- [vscode]: Update `.vscode/settings.json` to v.1.0.17.
+- [agents]: Update `AGENTS.md` to v.1.0.8.
+- [config]: Update `CODE_OF_CONDUCT.md` to v.1.0.0.
+- [config]: Update `CONTRIBUTING.md` to v.1.0.1.
+- [scripts]: Update `scripts/downloads.mjs`.
+- [config]: Add `SHARED-AGENTS.md`.
+- [config]: Add `TOOLCHAIN.md` v.1.0.1.
+
+### Fixed
+
+- [frontend]: Preserve the Home Assistant Ingress path when fetching security event history.
+
+<a href="https://www.buymeacoffee.com/luligugithub"><img src="https://matterbridge.io/assets/bmc-button.svg" alt="Buy me a coffee" width="80"></a>
 
 ## [1.3.0] - 2026-10-23
 
