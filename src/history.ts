@@ -73,6 +73,7 @@ export class SecurityHistory {
     if (!context) throw new Error('Plugin storage is not available for security event history.');
     this.events = [...this.events, { datetime: new Date().toISOString(), ...event }].slice(-this.eventsNumber);
     const events = this.events;
+    // TODO: Consider adding error handling or logging for failed writes.
     const write = this.eventWrite.then(async () => context.set('SecurityEvents', events));
     this.eventWrite = write.catch(() => null);
     await write;
