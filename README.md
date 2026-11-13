@@ -30,7 +30,7 @@ This plugin allows you to create a security system.
 - Five preconfigured alerts: Home, Away, Night, 24h, Master.
 - Persistent history of mode changes, accepted triggers, startups and shutdowns, with timestamps and a configurable event limit (default: 200).
 - Color-coded frontend event table with local date and time display.
-- Endpoint graphs for modes, setters, triggers and alerts, with a compact timeline, daily totals and date/time tooltips.
+- Endpoint [graphs](./screenshots/main.png) for [modes](./screenshots/modes.png), setters, triggers and alerts, with a compact timeline, daily totals and date/time tooltips.
 
 The plugin requires matterbridge v.3.11.0.
 
@@ -112,6 +112,9 @@ Each entry contains `datetime` (an ISO 8601 UTC timestamp), `event` (the mode or
 ```json
 { "datetime": "2026-10-17T17:38:25.632Z", "event": "Mode Away", "type": "mode" }
 ```
+
+![Image1](./screenshots/image.png)
+![image2](./screenshots/image-1.png)
 
 ## Development guide
 

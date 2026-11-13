@@ -59,6 +59,7 @@
   "files": [
     "bin",
     "dist",
+    "screenshots",
     "apps/frontend/build",
     "apps/frontend/package.json",
     "npm-shrinkwrap.json",
