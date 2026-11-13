@@ -21,7 +21,7 @@
  * limitations under the License.
  */
 
-import type { NodeStorage } from 'node-persist-manager';
+import type { NodeStorage } from 'matterbridge/storage';
 
 import type { Modes, Triggers } from './module.js';
 
@@ -34,7 +34,7 @@ export type SecurityEvent = { datetime: string } & SecurityEventData;
  */
 export class SecurityHistory {
   events: SecurityEvent[] = [];
-  private eventWrite: Promise<void> = Promise.resolve();
+  private eventWrite: Promise<unknown> = Promise.resolve();
   private readonly eventsNumber: number;
 
   /**
@@ -73,10 +73,8 @@ export class SecurityHistory {
     if (!context) throw new Error('Plugin storage is not available for security event history.');
     this.events = [...this.events, { datetime: new Date().toISOString(), ...event }].slice(-this.eventsNumber);
     const events = this.events;
-    const save = async (): Promise<void> => {
-      await context.set('SecurityEvents', events);
-    };
-    this.eventWrite = this.eventWrite.then(save, save);
-    await this.eventWrite;
+    const write = this.eventWrite.then(async () => context.set('SecurityEvents', events));
+    this.eventWrite = write.catch(() => null);
+    await write;
   }
 }

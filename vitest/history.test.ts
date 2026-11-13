@@ -8,7 +8,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
-import { type NodeStorage, NodeStorageManager } from 'node-persist-manager';
+import { type NodeStorage, NodeStorageManager } from 'matterbridge/storage';
 
 import { type SecurityEvent, SecurityHistory } from '../src/history.js';
 
