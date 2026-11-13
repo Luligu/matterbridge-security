@@ -113,9 +113,6 @@ Each entry contains `datetime` (an ISO 8601 UTC timestamp), `event` (the mode or
 { "datetime": "2026-10-17T17:38:25.632Z", "event": "Mode Away", "type": "mode" }
 ```
 
-![Image1](./screenshots/image.png)
-![image2](./screenshots/image-1.png)
-
 ## Development guide
 
 Refer to the Matterbridge [Development guide](https://matterbridge.io/README-DEV.html) for other guidelines.
